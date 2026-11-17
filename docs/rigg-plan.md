@@ -163,13 +163,13 @@ Varje arbete görs på en egen gren, till exempel `funktion/avbryta-bestallning`
   1. `testskrivare` skriver ett rött test.
   2. Huvudagenten gör minsta möjliga ändring.
   3. Den kör `npm test` för TypeScript eller `npm run test:legacy` för Python tills det är grönt.
-  4. Den stannar med ett förslag på commit-meddelande som hänvisar till steget i planen.
+  4. Den markerar steget i `plan.md` med `Status: klart` och stannar med ett förslag på commit-meddelande som hänvisar till steget i planen.
 
   Stoppvillkor: efter tre försök utan grönt stannar agenten och rapporterar vad som är fel i stället för att fortsätta.
 - **`/granska <mapp> [gren]`**:
-  1. Huvudagenten sparar `git diff main...HEAD` i en fil. Med en gren som argument används `git diff main...<gren>`, och så granskas det utdelade pull requestet.
+  1. Huvudagenten sparar `git diff main...HEAD` i `.claude/tmp/granskning.diff`, som inte committas. Med en gren som argument används `git diff main...<gren>`, och så granskas det utdelade pull requestet.
   2. `granskare` läser diff-filen och de ändrade filerna och rapporterar fynden. Avvikelser från en beslutad ADR blir ett fynd under struktur. Finns ingen `plan.md` i mappen granskas diffen bara mot `docs/standard.md`.
-  3. Huvudagenten skriver `granskning.md` med fynden sorterade under säkerhet, struktur och kodstandard.
+  3. Huvudagenten skriver `granskning.md` med fynden sorterade under säkerhet, struktur och kodstandard. För varje fynd anger den vilken kontroll i riggen som hade stoppat det, eller att det bara hittades i granskningen. Filen har också avsnitten "Vad automatiken hittade" och "Åtgärder", där människan väljer vilka fynd som ska åtgärdas.
 - **`/verifiera <mapp>`**: läser de godkända kriterierna i `research.md` och avbryter om raden säger `Status: förslag`.
   1. Kör `npm run check`, hela `npm test` och `npm run test:legacy`.
   2. Kör `npm run db:reset`, startar servern med `npm start` i bakgrunden och stänger den efteråt.
