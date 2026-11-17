@@ -2,3 +2,5 @@
 2026-11-17T00:28:40.737Z	skydda-tester	testfiler	kommandot tar bort eller flyttar testfiler
 2026-11-17T00:32:22.638Z	skydda-hemligheter	src/_prov.ts	hemlighet direkt i koden (apiKey)
 2026-11-17T01:17:59.310Z	skydda-hemligheter	sessions/2026-11-17-1.md	hemlighet direkt i koden (apiKey)
+2026-11-17T22:18:23.054Z	kontrollera-kodstandard	tests/orders.test.ts	eslint: @typescript-eslint/no-unused-vars
+2026-11-17T22:18:52.318Z	kontrollera-kodstandard	src/routes/orders.ts	eslint: @typescript-eslint/no-unused-vars
