@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "check": "npm run lint && npm run typecheck && npm run format:check",
     "db:up": "docker compose up -d db",
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts"
   },
