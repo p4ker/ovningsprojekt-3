@@ -24,6 +24,7 @@ Beslut: inga
 - Test först: inget kodtest, eftersom steget bara ändrar dokumentation. Granskaren kontrollerar att texten stämmer med testerna från steg 1 och 2.
 - Filer som ändras: `docs/api.md` (raden för `POST /customers` på rad 8: formatkravet och 400-svaret med `invalid_input`).
 - Görs inte i det här steget: ändringar i kod eller tester.
+- Status: klart
 
 ## Utanför planen
 - Dubbletter av e-post (UNIQUE eller 409): godkänt som utanför ändringen, och kräver en migrering och ett eget beslut.

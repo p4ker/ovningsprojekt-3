@@ -5,7 +5,7 @@ Alla anrop utom `POST /customers` och `/health` kräver headern `X-Customer-Id` 
 | Metod och sökväg | Beskrivning | Svar |
 |---|---|---|
 | `GET /health` | Kontroll att API:t kör. | 200 |
-| `POST /customers` | Registrera en kund. Body: `{ name, email }`. | 201, 400 |
+| `POST /customers` | Registrera en kund. Body: `{ name, email }`. `email` ska ha formen `namn@domän.tld`, utan blanksteg inuti. Blanksteg före och efter tas bort. Saknas `name` eller `email`, eller har `email` fel form, blir svaret 400 med felkoden `invalid_input`. | 201, 400 |
 | `GET /customers/me` | Den inloggade kunden. | 200, 401, 404 |
 | `GET /customers/me/orders` | Den inloggade kundens beställningar, nyast först. | 200, 401 |
 | `POST /orders` | Lägg en beställning. Body: `{ lines: [{ product, quantity, unitPrice }], discountCode? }`. | 201, 400, 401 |
