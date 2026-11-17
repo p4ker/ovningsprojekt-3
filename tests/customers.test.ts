@@ -1,5 +1,6 @@
 import request from "supertest";
 import { createApp } from "../src/app";
+import { db } from "../src/db";
 import { closeDb, resetDb } from "./helpers/db";
 
 const app = createApp();
@@ -26,6 +27,39 @@ describe("POST /customers", () => {
   it("returnerar 400 när email saknas", async () => {
     const res = await request(app).post("/customers").send({ name: "Ida Ström" });
     expect(res.status).toBe(400);
+  });
+
+  async function antalKunder(): Promise<number> {
+    const r = await db.query("SELECT COUNT(*)::int AS antal FROM customers");
+    return r.rows[0].antal;
+  }
+
+  it.each([
+    ["utan @", "inte-en-adress"],
+    ["utan domän med punkt", "ida@example"],
+    ["utan lokal del", "@example.com"],
+    ["med blanksteg inuti", "ida strom@example.com"],
+  ])("returnerar 400 när email är %s (%s)", async (_beskrivning, email) => {
+    const före = await antalKunder();
+    const res = await request(app).post("/customers").send({ name: "Ida Ström", email });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("invalid_input");
+    expect(res.body.error.message).not.toContain(email);
+    expect(await antalKunder()).toBe(före);
+  });
+
+  it("trimmar blanksteg runt email och returnerar 201", async () => {
+    const res = await request(app)
+      .post("/customers")
+      .send({ name: "Ida Ström", email: "  ida.strom@example.com  " });
+    expect(res.status).toBe(201);
+    expect(res.body.email).toBe("ida.strom@example.com");
+  });
+
+  it("returnerar 400 när email inte är en sträng", async () => {
+    const res = await request(app).post("/customers").send({ name: "Ida Ström", email: 123 });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("invalid_input");
   });
 });
 

@@ -5,6 +5,15 @@ export type Customer = { id: number; uuid: string; name: string; email: string }
 
 export type OrderSummary = { id: number; status: string; createdAt: string };
 
+// Enkel formatkontroll: inga blanksteg, exakt ett @, något före det och en domän med minst en punkt.
+function isValidEmail(email: string): boolean {
+  if (/\s/.test(email)) return false;
+  const parts = email.split("@");
+  if (parts.length !== 2) return false;
+  const [local, domain] = parts;
+  return local.length > 0 && /^[^.]+(\.[^.]+)+$/.test(domain);
+}
+
 export async function createCustomer(input: {
   name?: unknown;
   email?: unknown;
@@ -15,9 +24,14 @@ export async function createCustomer(input: {
   if (typeof input.email !== "string" || input.email.trim() === "") {
     return err("invalid_input", "email saknas.");
   }
+  const email = input.email.trim();
+  if (!isValidEmail(email)) {
+    // Meddelandet upprepar inte adressen: inga personuppgifter i fel eller loggar.
+    return err("invalid_input", "email är inte en giltig e-postadress.");
+  }
   const res = await db.query(
     "INSERT INTO customers (name, email) VALUES ($1, $2) RETURNING id, uuid, name, email",
-    [input.name.trim(), input.email.trim()],
+    [input.name.trim(), email],
   );
   return ok(res.rows[0]);
 }
