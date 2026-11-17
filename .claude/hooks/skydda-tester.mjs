@@ -46,12 +46,59 @@ const utanKommentarer = (text) =>
   text.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*(?:\/\/|#).*$/gm, "");
 const antal = (text, monster) => (utanKommentarer(text).match(monster) ?? []).length;
 
+// Tabelltester: it.each([...]) och @pytest.mark.parametrize("namn", [...]).
+// Varje rad i tabellen är ett test, så en borttagen rad räknas som ett borttaget test.
+const TABELL = /\b(?:it|test)\.each\s*\(\s*\[|@pytest\.mark\.parametrize\s*\(\s*(["'])[^"'\n]*\1\s*,\s*\[/g;
+
+// Räknar elementen på översta nivån i listan som börjar med "[" på plats start.
+function antalElement(text, start) {
+  let djup = 0;
+  let citat = null;
+  let element = 0;
+  let harInnehall = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (citat) {
+      if (c === "\\") i++;
+      else if (c === citat) citat = null;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      citat = c;
+      harInnehall = true;
+    } else if ("[({".includes(c)) {
+      if (djup > 0) harInnehall = true;
+      djup++;
+    } else if ("])}".includes(c)) {
+      djup--;
+      if (djup === 0) return element + (harInnehall ? 1 : 0);
+    } else if (c === "," && djup === 1) {
+      if (harInnehall) element++;
+      harInnehall = false;
+    } else if (!/\s/.test(c)) {
+      harInnehall = true;
+    }
+  }
+  return element;
+}
+
+// Antal tester: varje it(), test() och def test_ är ett, och en tabell med n rader är n.
+function antalTester(text) {
+  const ren = utanKommentarer(text);
+  let summa = (ren.match(TEST) ?? []).length;
+  for (const m of ren.matchAll(TABELL)) {
+    const rader = antalElement(ren, m.index + m[0].length - 1);
+    summa += Math.max(rader, 1) - 1;
+  }
+  return summa;
+}
+
 function kontrolleraTestfil(fil, fore, efter) {
   if (antal(efter, AVSTANGT) > antal(fore, AVSTANGT)) {
     stoppa(fil, "ändringen stänger av ett test (skip, only, xit eller pytest.mark.skip)");
   }
-  const fore_n = antal(fore, TEST);
-  const efter_n = antal(efter, TEST);
+  const fore_n = antalTester(fore);
+  const efter_n = antalTester(efter);
   if (efter_n < fore_n) {
     stoppa(fil, `ändringen tar bort tester (${fore_n} före, ${efter_n} efter)`);
   }
@@ -93,7 +140,18 @@ const { tool_name: verktyg, tool_input: indata = {} } = lasIndata();
 if (verktyg === "Bash" && typeof indata.command === "string") {
   kontrolleraKommando(indata.command);
 } else if (verktyg === "Edit" && indata.file_path) {
-  kontrolleraFil(relativ(indata.file_path), indata.old_string ?? "", indata.new_string ?? "");
+  const fil = relativ(indata.file_path);
+  const gammal = indata.old_string ?? "";
+  const ny = indata.new_string ?? "";
+  const sokvag = path.join(root, fil);
+  const helFil = existsSync(sokvag) ? readFileSync(sokvag, "utf8") : "";
+  if (gammal && helFil.includes(gammal)) {
+    // Jämför hela filen före och efter, så att en borttagen rad mitt i en tabell syns.
+    const efter = indata.replace_all ? helFil.split(gammal).join(ny) : helFil.replace(gammal, () => ny);
+    kontrolleraFil(fil, helFil, efter);
+  } else {
+    kontrolleraFil(fil, gammal, ny);
+  }
 } else if (verktyg === "Write" && indata.file_path) {
   const fil = relativ(indata.file_path);
   const fore = existsSync(path.join(root, fil)) ? readFileSync(path.join(root, fil), "utf8") : "";
