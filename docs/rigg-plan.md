@@ -58,7 +58,7 @@ Mål: den minsta rigg som uppfyller kraven för godkänt i kursprojektet och som
   - Finns ingen logg från passet skapar den en med bara fakta och markeringen "Ingen sammanfattning skrevs".
   - Skriver "kunde inte köras" i stället för att fastna om databasen inte är igång.
   - Tidsgränsen behövs eftersom SessionEnd annars bara får 1,5 sekunder, och det räcker inte för testerna.
-- `.claude/skills/sessionslogg/SKILL.md`: skriver `sessions/ÅÅÅÅ-MM-DD-n.md` med rubrikerna Läge, Vad som fungerade (med bevis), Vad som misslyckades, Vad som återstår, Beslut, Vad kontrollerna fångade och Mätning. Under Mätning ber den dig klistra in utdata från `/cost` (tokens, tid och kostnad) och anger vilket av de tre arbetena passet gällde. Inga personuppgifter. Loggen får raden `Pass: <starttiden>`. Den committas efter att sessionen har avslutats, eftersom faktadelen läggs till först då.
+- `.claude/skills/sessionslogg/SKILL.md`: skriver `sessions/ÅÅÅÅ-MM-DD-n.md` med rubrikerna Läge, Vad som fungerade (med bevis), Vad som misslyckades, Vad som återstår, Beslut, Vad kontrollerna fångade och Mätning. Under Mätning ber den dig klistra in utdata från `/usage` (tokens, tid och kostnad) och anger vilket av de tre arbetena passet gällde. Inga personuppgifter. Loggen får raden `Pass: <starttiden>`. Den committas efter att sessionen har avslutats, eftersom faktadelen läggs till först då.
 - Hooksen registreras under `hooks` i `.claude/settings.json`.
 
 **Klart när:**

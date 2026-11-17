@@ -43,7 +43,7 @@ Rader ur sessions/fangster.log från det här passet och fel som lint, typkontro
 Skriv vad som hade hänt utan kontrollen. Skriv "Inget" om inget fångades.
 
 ## Mätning
-Tokens, tid och kostnad för passet. Be användaren klistra in utdata från /cost.
+Tokens, tid och kostnad för passet. Be användaren klistra in utdata från /usage.
 Skriv "Ej angivet" om användaren inte ger några siffror. Hitta inte på siffror.
 ```
 
