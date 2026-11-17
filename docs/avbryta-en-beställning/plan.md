@@ -40,6 +40,7 @@ Beslut: ADR 0001 (docs/adr/0001-avbryt-som-egen-endpoint.md, `Status: beslutad`)
 - Test först: `tests/orders.test.ts`. Kund 3 lägger en beställning och två anrop skickas med `Promise.all`. Exakt ett svar är 200 och det andra 409, och statusen är `cancelled`. Testet kan vara grönt direkt om steg 1 redan använder en enda villkorad UPDATE. Det är avsikten: testet finns för att en senare ändring till "läs, kontrollera, skriv" ska bli rött. Skulle det vara rött avslöjar det att steg 1 inte följde planen, och då rättas implementationen här.
 - Filer som ändras: `tests/orders.test.ts`, och vid behov `src/services/orderService.ts`.
 - Görs inte i det här steget: andra ändringar i beteendet.
+- Status: klart. Testet var grönt direkt. Mot en tillfällig variant som läser, kontrollerar och sedan skriver blev det rött i 5 av 5 körningar (båda anropen fick 200). Varianten committades inte.
 
 ### Steg 5: Dokumentera endpointen
 - Kriterium: API-kontraktet i research.md (alla kriterier beskrivs i dokumentationen)
