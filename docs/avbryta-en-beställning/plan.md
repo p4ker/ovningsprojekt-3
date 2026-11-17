@@ -47,6 +47,7 @@ Beslut: ADR 0001 (docs/adr/0001-avbryt-som-egen-endpoint.md, `Status: beslutad`)
 - Test först: inget kodtest. Steget ändrar bara dokumentation. Kontrollen är att `npm test` och `npm run check` fortfarande är gröna och att tabellen stämmer med testerna i steg 1–4.
 - Filer som ändras: `docs/api.md`. En ny rad efter `GET /orders/:id`: `POST /orders/:id/cancel`, beskrivning med regeln (egen beställning, status `new`, högst 30 minuter från att den lades, ingen body), svar `200, 400, 401, 403, 404, 409`. Beskriv de två orsakerna till 409.
 - Görs inte i det här steget: kodändringar.
+- Status: klart
 
 ## Utanför planen
 
