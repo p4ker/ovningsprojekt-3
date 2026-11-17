@@ -205,6 +205,76 @@ describe("POST /orders/:id/cancel", () => {
     expect(typeof res.body.error.code).toBe("string");
     expect(typeof res.body.error.message).toBe("string");
   });
+
+  function kontrolleraFelform(body: unknown, kod: string): void {
+    const b = body as { error: { code: string; message: string } };
+    expect(Object.keys(b)).toEqual(["error"]);
+    expect(Object.keys(b.error).sort()).toEqual(["code", "message"]);
+    expect(b.error.code).toBe(kod);
+    expect(typeof b.error.message).toBe("string");
+    expect(b.error.message.length).toBeGreaterThan(0);
+  }
+
+  it("returnerar 401 utan X-Customer-Id och ändrar inte beställningen", async () => {
+    expect(await statusIDb(1043)).toBe("new");
+
+    const res = await request(app).post("/orders/1043/cancel");
+
+    expect(res.status).toBe(401);
+    kontrolleraFelform(res.body, "unauthorized");
+    expect(await statusIDb(1043)).toBe("new");
+  });
+
+  it("returnerar 403 när kund 1 avbryter kund 3:s beställning inom fönstret och ändrar inte statusen", async () => {
+    await db.query("UPDATE orders SET created_at = now() WHERE id = $1", [1043]);
+
+    const res = await request(app).post("/orders/1043/cancel").set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(403);
+    kontrolleraFelform(res.body, "forbidden");
+    expect(await statusIDb(1043)).toBe("new");
+  });
+
+  it("returnerar 404 för en beställning som inte finns", async () => {
+    const res = await request(app).post("/orders/999999/cancel").set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(404);
+    kontrolleraFelform(res.body, "not_found");
+  });
+
+  it.each(["abc", "0", "-1"])("returnerar 400 för ogiltigt id %s", async (ogiltigtId) => {
+    const res = await request(app).post(`/orders/${ogiltigtId}/cancel`).set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(400);
+    kontrolleraFelform(res.body, "invalid_input");
+  });
+
+  it("returnerar 403 och inte 409 när kund 1 avbryter en annan kunds beställning som har gått ut", async () => {
+    const id = await laggBestallning();
+    await db.query(
+      "UPDATE orders SET created_at = now() - ($2 * interval '1 minute') WHERE id = $1",
+      [id, 31],
+    );
+
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(403);
+    kontrolleraFelform(res.body, "forbidden");
+    expect(await statusIDb(id)).toBe("new");
+  });
+
+  it("returnerar 403 och inte 409 när kund 1 avbryter en annan kunds redan avbrutna beställning", async () => {
+    const id = await laggBestallning();
+    await db.query("UPDATE orders SET status = 'cancelled', created_at = now() WHERE id = $1", [
+      id,
+    ]);
+
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "1");
+
+    expect(res.status).toBe(403);
+    kontrolleraFelform(res.body, "forbidden");
+    expect(await statusIDb(id)).toBe("cancelled");
+  });
 });
 
 describe("GET /orders/:id/price", () => {
