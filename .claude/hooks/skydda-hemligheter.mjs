@@ -57,12 +57,14 @@ function stoppa(fil, orsaker) {
 
 // Hittar hemligheter i texten och returnerar [träff, orsak]. Träffen används bara
 // för att jämföra med det som redan stod i filen och skrivs aldrig ut.
-function hitta(text) {
+function hitta(text, arDokumentation) {
   const fynd = [];
   for (const [monster, orsak] of KANDA_FORMAT) {
     for (const m of text.matchAll(monster)) fynd.push([m[0], orsak]);
   }
-  for (const m of text.matchAll(TILLDELNING)) {
+  // Dokumentation och loggar får visa exempel som `password = "..."`. Där letar vi
+  // bara efter riktiga nyckelformat och URL:er, inte efter tilldelningar.
+  for (const m of arDokumentation ? [] : text.matchAll(TILLDELNING)) {
     const [hela, namn, , varde] = m;
     if (varde.includes("${")) continue; // sätts ihop av andra värden, inte en fast hemlighet
     fynd.push([hela, `hemlighet direkt i koden (${namn})`]);
@@ -96,6 +98,7 @@ if (verktyg === "Edit") {
   efter = indata.content ?? "";
 }
 
-const nya = hitta(efter).filter(([traff]) => !fore.includes(traff));
+const arDokumentation = fil.endsWith(".md");
+const nya = hitta(efter, arDokumentation).filter(([traff]) => !fore.includes(traff));
 if (nya.length > 0) stoppa(fil, nya.map(([, orsak]) => orsak));
 process.exit(0);
