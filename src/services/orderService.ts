@@ -93,16 +93,23 @@ export async function cancelOrder(orderId: number, customerId: number): Promise<
     [orderId, customerId],
   );
   if (res.rowCount === 0) {
-    return cancelFailure(orderId);
+    return cancelFailure(orderId, customerId);
   }
   return getOrder(orderId, customerId);
 }
 
 // Läser beställningen efter en UPDATE som inte träffade, bara för att välja felsvar.
-async function cancelFailure(orderId: number): Promise<Result<Order>> {
-  const res = await db.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+// Ordningen är 404, 403, 409, så att en annan kunds beställning aldrig avslöjar sin status.
+async function cancelFailure(orderId: number, customerId: number): Promise<Result<Order>> {
+  const res = await db.query(
+    `SELECT customer_id AS "customerId", status FROM orders WHERE id = $1`,
+    [orderId],
+  );
   if (res.rowCount === 0) {
     return err("not_found", `Beställning ${orderId} finns inte.`);
+  }
+  if (res.rows[0].customerId !== customerId) {
+    return err("forbidden", "Beställningen tillhör en annan kund.");
   }
   if (res.rows[0].status !== "new") {
     return err("conflict", "Bara nya beställningar kan avbrytas.");

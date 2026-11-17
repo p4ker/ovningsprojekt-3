@@ -33,6 +33,7 @@ Beslut: ADR 0001 (docs/adr/0001-avbryt-som-egen-endpoint.md, `Status: beslutad`)
 - Test först: `tests/orders.test.ts`. (a) Utan `X-Customer-Id`: 401 och beställning 1043 oförändrad (kriterium 7). (b) Kund 1 avbryter 1043 (kund 3): 403 `forbidden`, status oförändrad (kriterium 8). (c) Id 999999: 404 `not_found` (kriterium 9). (d) `abc`, och även `0` och `-1`: 400 `invalid_input` (kriterium 10). (e) Kund 1 avbryter en annan kunds beställning som har gått ut (`created_at` 31 minuter bakåt) och en som redan är `cancelled`: 403, inte 409 (kriterium 11). (f) Alla felsvar har rätt form (kriterium 12). Flera av dem kan redan vara gröna efter steg 1–2. Det som ska vara rött är (e), om steg 2 läser in raden på ett sätt som ger konflikt före ägarkontrollen. Är alla gröna redan blir steget bara en låsning av beteendet med tester, och det antecknas i planen.
 - Filer som ändras: `tests/orders.test.ts`, och vid behov `src/services/orderService.ts` så att ägarkontrollen alltid kommer före status och tid.
 - Görs inte i det här steget: samtidighet, dokumentation.
+- Status: klart. Testerna för 401, 404 och 400 var gröna direkt och låser beteendet. Testerna för 403, inklusive (e), var röda (409) tills ägarkontrollen lades in före status och tid.
 
 ### Steg 4: Två samtidiga anrop kan inte båda lyckas
 - Kriterium: 1 och 4–6, i form av kravet i `docs/standard.md:12` att kontroll och uppdatering sker i samma operation.
