@@ -116,6 +116,95 @@ describe("POST /orders/:id/cancel", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("cancelled");
   });
+
+  async function statusIDb(id: number): Promise<string> {
+    const rad = await db.query("SELECT status FROM orders WHERE id = $1", [id]);
+    return rad.rows[0].status;
+  }
+
+  async function forsta409(): Promise<{ id: number; message: string }> {
+    const id = await laggBestallning();
+    await db.query(
+      "UPDATE orders SET created_at = now() - ($2 * interval '1 minute') WHERE id = $1",
+      [id, 31],
+    );
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+    return { id, message: res.body?.error?.message };
+  }
+
+  it("returnerar 409 när beställningen lades för 31 minuter sedan och ändrar inte statusen", async () => {
+    const id = await laggBestallning();
+    await db.query(
+      "UPDATE orders SET created_at = now() - ($2 * interval '1 minute') WHERE id = $1",
+      [id, 31],
+    );
+
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("conflict");
+    expect(await statusIDb(id)).toBe("new");
+  });
+
+  it("returnerar 409 när en redan avbruten beställning avbryts igen", async () => {
+    const id = await laggBestallning();
+    const forsta = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+    expect(forsta.status).toBe(200);
+
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe("conflict");
+    expect(await statusIDb(id)).toBe("cancelled");
+  });
+
+  it.each(["paid", "shipped"])(
+    "returnerar 409 för status %s inom fönstret och ändrar inte statusen",
+    async (status) => {
+      const id = await laggBestallning();
+      await db.query("UPDATE orders SET status = $2, created_at = now() WHERE id = $1", [
+        id,
+        status,
+      ]);
+
+      const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe("conflict");
+      expect(await statusIDb(id)).toBe(status);
+    },
+  );
+
+  it("ger olika meddelanden för ett fönster som gått ut och för fel status", async () => {
+    const utgangen = await forsta409();
+
+    const id = await laggBestallning();
+    await db.query("UPDATE orders SET status = $2, created_at = now() WHERE id = $1", [id, "paid"]);
+    const felStatus = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+
+    expect(felStatus.status).toBe(409);
+    expect(typeof utgangen.message).toBe("string");
+    expect(utgangen.message.length).toBeGreaterThan(0);
+    expect(typeof felStatus.body.error.message).toBe("string");
+    expect(felStatus.body.error.message.length).toBeGreaterThan(0);
+    expect(utgangen.message).not.toBe(felStatus.body.error.message);
+  });
+
+  it("returnerar felsvar med formen { error: { code, message } } för 409", async () => {
+    const id = await laggBestallning();
+    await db.query(
+      "UPDATE orders SET created_at = now() - ($2 * interval '1 minute') WHERE id = $1",
+      [id, 31],
+    );
+
+    const res = await request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3");
+
+    expect(res.status).toBe(409);
+    expect(Object.keys(res.body)).toEqual(["error"]);
+    expect(Object.keys(res.body.error).sort()).toEqual(["code", "message"]);
+    expect(typeof res.body.error.code).toBe("string");
+    expect(typeof res.body.error.message).toBe("string");
+  });
 });
 
 describe("GET /orders/:id/price", () => {

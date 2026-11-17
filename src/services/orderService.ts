@@ -93,7 +93,19 @@ export async function cancelOrder(orderId: number, customerId: number): Promise<
     [orderId, customerId],
   );
   if (res.rowCount === 0) {
-    return err("not_found", `Beställning ${orderId} finns inte.`);
+    return cancelFailure(orderId);
   }
   return getOrder(orderId, customerId);
+}
+
+// Läser beställningen efter en UPDATE som inte träffade, bara för att välja felsvar.
+async function cancelFailure(orderId: number): Promise<Result<Order>> {
+  const res = await db.query(`SELECT status FROM orders WHERE id = $1`, [orderId]);
+  if (res.rowCount === 0) {
+    return err("not_found", `Beställning ${orderId} finns inte.`);
+  }
+  if (res.rows[0].status !== "new") {
+    return err("conflict", "Bara nya beställningar kan avbrytas.");
+  }
+  return err("conflict", "Beställningen kan bara avbrytas inom 30 minuter från att den lades.");
 }
