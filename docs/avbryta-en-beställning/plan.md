@@ -26,6 +26,7 @@ Beslut: ADR 0001 (docs/adr/0001-avbryt-som-egen-endpoint.md, `Status: beslutad`)
 - Test först: `tests/orders.test.ts`. (a) `created_at` 31 minuter bakåt: 409, `error.code === "conflict"`, statusen i databasen är fortfarande `new` (kriterium 4). (b) Beställning med status `cancelled` avbryts igen: 409 (kriterium 5). (c) Status `paid` och status `shipped` med `created_at = now()`: 409 och oförändrad status (kriterium 6). (d) Meddelandet för fönster som gått ut skiljer sig från meddelandet för fel status. (e) Felsvaret har formen `{ error: { code, message } }` (kriterium 12).
 - Filer som ändras: `tests/orders.test.ts`, `src/services/orderService.ts` (läsningen efter en misslyckad UPDATE väljer mellan de två `conflict`-meddelandena).
 - Görs inte i det här steget: 400/401/403/404, samtidighetstestet.
+- Status: klart
 
 ### Steg 3: Felfallen 401, 400, 404, 403 och rätt ordning
 - Kriterium: 7, 8, 9, 10, 11 och 12
