@@ -10,6 +10,7 @@ Alla anrop utom `POST /customers` och `/health` kräver headern `X-Customer-Id` 
 | `GET /customers/me/orders` | Den inloggade kundens beställningar, nyast först. | 200, 401 |
 | `POST /orders` | Lägg en beställning. Body: `{ lines: [{ product, quantity, unitPrice }], discountCode? }`. | 201, 400, 401 |
 | `GET /orders/:id` | En egen beställning med rader. | 200, 400, 401, 403, 404 |
+| `POST /orders/:id/cancel` | Avbryt en egen beställning. Ingen body. Det går bara om beställningen har status `new` och lades för högst 30 minuter sedan. Svaret är beställningen med `status: "cancelled"`, i samma form som `GET /orders/:id`. 409 med felkoden `conflict` om 30 minuter har gått eller om statusen inte är `new` (redan avbruten, betald eller skickad); meddelandet säger vilket. En annan kunds beställning ger alltid 403, även när den annars hade gett 409. Se ADR 0001. | 200, 400, 401, 403, 404, 409 |
 | `GET /orders/:id/price` | Pris för en egen beställning: `{ net, vat, total }`. Räknas av den äldre modulen. | 200, 400, 401, 403, 404 |
 
 ## Den äldre modulen
