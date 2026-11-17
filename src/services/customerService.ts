@@ -5,8 +5,9 @@ export type Customer = { id: number; uuid: string; name: string; email: string }
 
 export type OrderSummary = { id: number; status: string; createdAt: string };
 
-// Enkel formatkontroll: exakt ett @, något före det och en domän med minst en punkt.
+// Enkel formatkontroll: inga blanksteg, exakt ett @, något före det och en domän med minst en punkt.
 function isValidEmail(email: string): boolean {
+  if (/\s/.test(email)) return false;
   const parts = email.split("@");
   if (parts.length !== 2) return false;
   const [local, domain] = parts;

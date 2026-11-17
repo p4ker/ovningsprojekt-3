@@ -17,6 +17,7 @@ Beslut: inga
 - Test först: `tests/customers.test.ts`. Rött test: `ida strom@example.com` ger 400 `invalid_input`. Dessutom två tester som redan bör vara gröna och som låser beteendet: `ida.strom@example.com` ger 201, och `  ida.strom@example.com  ` ger 201 med adressen sparad utan blanksteg. Ett test för att `email` som inte är en sträng (till exempel ett tal) ger 400 utan att kasta.
 - Filer som ändras: `src/services/customerService.ts` (regeln utökas så att blanksteg inuti nekas).
 - Görs inte i det här steget: dubbletter, trasig JSON.
+- Status: klart
 
 ### Steg 3: Dokumentera i API-dokumentationen
 - Kriterium: API-kontraktet i research.md (ingen ny funktion, dokumentationen ska stämma).
