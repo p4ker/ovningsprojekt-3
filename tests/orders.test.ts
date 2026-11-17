@@ -275,6 +275,20 @@ describe("POST /orders/:id/cancel", () => {
     kontrolleraFelform(res.body, "forbidden");
     expect(await statusIDb(id)).toBe("cancelled");
   });
+
+  it("låter exakt ett av två samtidiga anrop lyckas och returnerar 409 för det andra", async () => {
+    const id = await laggBestallning();
+
+    const svar = await Promise.all([
+      request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3"),
+      request(app).post(`/orders/${id}/cancel`).set("X-Customer-Id", "3"),
+    ]);
+
+    expect(svar.map((r) => r.status).sort()).toEqual([200, 409]);
+    const konflikt = svar.find((r) => r.status === 409);
+    expect(konflikt?.body.error.code).toBe("conflict");
+    expect(await statusIDb(id)).toBe("cancelled");
+  });
 });
 
 describe("GET /orders/:id/price", () => {
