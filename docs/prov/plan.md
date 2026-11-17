@@ -10,6 +10,7 @@ Beslut: inga
 - Test först: `tests/customers.test.ts`. Tre nya tester som är röda före koden: `inte-en-adress`, `ida@example` och `@example.com` ger 400 med `error.code` `invalid_input`. Samma tester kontrollerar att antalet rader i `customers` är oförändrat och att `error.message` inte innehåller den inskickade adressen.
 - Filer som ändras: `src/services/customerService.ts` (formatkontroll i `createCustomer`, kontrollen görs på den trimmade adressen och returnerar `err("invalid_input", "email är inte en giltig e-postadress.")`). Ingen ändring i routen eller i `src/http.ts`.
 - Görs inte i det här steget: regeln om blanksteg inuti adressen. Ingen loggning, inga schemaändringar.
+- Status: klart
 
 ### Steg 2: Blanksteg inuti adressen nekas, och giltiga adresser fungerar som förut
 - Kriterium: 4, samt 1 och 5 (skyddas mot regression).
