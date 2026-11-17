@@ -81,3 +81,19 @@ export async function getOrder(orderId: number, customerId: number): Promise<Res
   );
   return ok({ ...order, lines: lines.rows });
 }
+
+// Avbryter en egen beställning med status new inom 30 minuter från att den lades (ADR 0001).
+// Ägare, status och tid kontrolleras i samma UPDATE, så att två samtidiga anrop inte båda lyckas.
+export async function cancelOrder(orderId: number, customerId: number): Promise<Result<Order>> {
+  const res = await db.query(
+    `UPDATE orders SET status = 'cancelled'
+      WHERE id = $1 AND customer_id = $2 AND status = 'new'
+        AND created_at >= now() - interval '30 minutes'
+      RETURNING id`,
+    [orderId, customerId],
+  );
+  if (res.rowCount === 0) {
+    return err("not_found", `Beställning ${orderId} finns inte.`);
+  }
+  return getOrder(orderId, customerId);
+}
