@@ -19,6 +19,7 @@ Beslut: ADR 0001 (docs/adr/0001-avbryt-som-egen-endpoint.md, `Status: beslutad`)
 - Test först: `tests/orders.test.ts`, ny `describe("POST /orders/:id/cancel")`. (a) Kund 3 lägger en beställning, anropar cancel och får 200 med `status: "cancelled"` och samma form som `GET /orders/:id` (kriterium 1). (b) Ett följande `GET /orders/:id` och en `db.query` visar `cancelled` (kriterium 2). (c) `created_at` flyttas till 29 minuter bakåt och cancel ger 200 (kriterium 3). Testerna är röda eftersom routen saknas (404 från Express).
 - Filer som ändras: `tests/orders.test.ts`, `src/routes/orders.ts` (ny route med `requireCustomer` och `parseId`, samma mönster som `GET /orders/:id`), `src/services/orderService.ts` (`cancelOrder` med UPDATE-villkoret ovan; här räcker det att den lyckade vägen fungerar och att `UPDATE` utan träff ger `not_found`).
 - Görs inte i det här steget: de olika felfallen och deras meddelanden, test av samtidighet, `docs/api.md`.
+- Status: klart
 
 ### Steg 2: För sent och fel status ger 409 och ändrar ingenting
 - Kriterium: 4, 5, 6 och 12 (för 409)
