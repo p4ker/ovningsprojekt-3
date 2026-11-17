@@ -27,6 +27,7 @@ describe("POST /customers", () => {
   it("returnerar 400 när email saknas", async () => {
     const res = await request(app).post("/customers").send({ name: "Ida Ström" });
     expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("invalid_input");
   });
 
   async function antalKunder(): Promise<number> {
