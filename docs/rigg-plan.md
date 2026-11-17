@@ -124,6 +124,7 @@ Meddelandet blir "Tester får ändras men inte tas bort eller stängas av. Rätt
   - En tilldelning där namnet innehåller `password`, `secret`, `token` eller `api_key` och värdet är en sträng skriven direkt i koden. Värden som läses från `process.env` eller `os.environ` går igenom.
   - URL:er med inloggningsuppgifter till andra värdar än `localhost`.
 - Letar inte efter "långa slumpmässiga strängar". Det ger falsklarm på UUID:n och hashar.
+- Stoppar bara nya förekomster. Det som redan står i filen får stå kvar, annars skulle varje ändring nära en gammal rad stoppas.
 - Undantag:
   - Den lokala standardadressen `postgres:postgres@localhost`, som redan finns i `src/db.ts` och `tests/helpers/env.ts`.
   - Hookens egen fil, eftersom den innehåller mönstren.
