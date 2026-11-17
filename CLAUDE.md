@@ -46,7 +46,7 @@ Python-paketen ligger i `.venv`. Aktivera den med `source .venv/bin/activate` in
 ```bash
 npm run db:up        # PostgreSQL 16 i Docker (skapar även butik_test)
 npm run db:reset     # schema + testdata i BÅDA databaserna (butik och butik_test)
-npm test             # Jest, --runInBand (16 tester ska vara gröna)
+npm test             # Jest, --runInBand (alla tester ska vara gröna)
 npx jest tests/orders.test.ts -t "returnerar 401"   # en fil / ett test
 npm run test:legacy  # pytest, letar efter tests/test_*.py (inga finns än)
 npm run lint         # ESLint på src och tests
