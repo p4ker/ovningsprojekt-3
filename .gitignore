@@ -6,3 +6,4 @@ __pycache__/
 src/legacy/price_calc.log
 .claude/settings.local.json
 .venv/
+.claude/.pass-start

@@ -48,17 +48,17 @@ Mål: den minsta rigg som uppfyller kraven för godkänt i kursprojektet och som
 
 **Filer:**
 - `.claude/hooks/las-logg.mjs` (**SessionStart**). Läser `source` från stdin:
-  - `startup` och `resume`: sparar passets starttid i `.claude/.pass-start` (läggs i `.gitignore`). Skriver sedan rubriken "Förra passets logg" och den senaste filen i `sessions/` till stdout, med kod 0. Om filen har markeringen "Ingen sammanfattning skrevs" lägger den till: "Förra passet saknar sammanfattning. Skriv den först utifrån faktadelen och git log."
+  - `startup` och `resume`: sparar passets starttid i `.claude/.pass-start` (läggs i `.gitignore`). Skriver sedan rubriken "Förra passets logg" och den senaste filen i `sessions/` till stdout, med kod 0. Om filen har markeringen "Ingen sammanfattning skrevs" lägger den till: "Förra passet saknar sammanfattning. Skriv den först utifrån faktadelen och git log." Om `sessions/` har ändringar som inte är committade påminner den om att committa loggen.
   - `compact`: skriver loggen igen, utan uppmaningen och utan att ändra starttiden.
   - `clear`: gör ingenting. `/clear` körs mellan faserna och är inte ett nytt pass.
 - `.claude/hooks/skriv-logg.mjs` (**SessionEnd** och **PreCompact**, med `"timeout": 60` i `settings.json`):
   - Gör ingenting när `reason` är `clear`.
-  - Letar upp den logg i `sessions/` som är nyare än starttiden i `.claude/.pass-start`. Äldre loggar hör till tidigare pass och räknas inte, även om de är från samma dag.
+  - Letar upp passets logg i `sessions/`. Den känns igen på raden `Pass: <starttiden>`, där starttiden kommer från `.claude/.pass-start`. Loggar från tidigare pass har en annan starttid och räknas inte, även om de är från samma dag. En logg som skrevs under passet men saknar raden får den tillagd.
   - Skriver avsnittet `## Fakta (skriven av hook)` med branch, commits sedan passets start, filer som inte är committade, resultatet av `npm test` och `npm run test:legacy` och antalet nya rader i `sessions/fangster.log`. Finns avsnittet redan ersätts det, så att det inte blir flera.
   - Finns ingen logg från passet skapar den en med bara fakta och markeringen "Ingen sammanfattning skrevs".
   - Skriver "kunde inte köras" i stället för att fastna om databasen inte är igång.
   - Tidsgränsen behövs eftersom SessionEnd annars bara får 1,5 sekunder, och det räcker inte för testerna.
-- `.claude/skills/sessionslogg/SKILL.md`: skriver `sessions/ÅÅÅÅ-MM-DD-n.md` med rubrikerna Läge, Vad som fungerade (med bevis), Vad som misslyckades, Vad som återstår, Beslut, Vad kontrollerna fångade och Mätning. Under Mätning ber den dig klistra in utdata från `/cost` (tokens, tid och kostnad) och anger vilket av de tre arbetena passet gällde. Inga personuppgifter.
+- `.claude/skills/sessionslogg/SKILL.md`: skriver `sessions/ÅÅÅÅ-MM-DD-n.md` med rubrikerna Läge, Vad som fungerade (med bevis), Vad som misslyckades, Vad som återstår, Beslut, Vad kontrollerna fångade och Mätning. Under Mätning ber den dig klistra in utdata från `/cost` (tokens, tid och kostnad) och anger vilket av de tre arbetena passet gällde. Inga personuppgifter. Loggen får raden `Pass: <starttiden>`. Den committas efter att sessionen har avslutats, eftersom faktadelen läggs till först då.
 - Hooksen registreras under `hooks` i `.claude/settings.json`.
 
 **Klart när:**
