@@ -12,6 +12,8 @@ De tomma katalogerna `.claude/agents/`, `.claude/skills/`, `docs/adr/` och `sess
 
 Krav: Node.js 22+, Python 3.11+, Docker. Kopiera `.env.example` till `.env` först.
 
+Python-paketen ligger i `.venv`. Aktivera den med `source .venv/bin/activate` innan du kör tester eller startar API:t, annars hittar `python3` inte `psycopg` och prisberäkningen misslyckas. Databasen lyssnar på port 5434 (inte 5432, som används av ett annat projekt på samma dator).
+
 ```bash
 npm run db:up        # PostgreSQL 16 i Docker (skapar även butik_test)
 npm run db:reset     # schema + testdata i BÅDA databaserna (butik och butik_test)

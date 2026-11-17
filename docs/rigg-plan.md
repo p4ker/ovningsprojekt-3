@@ -27,8 +27,10 @@ Mål: den minsta rigg som uppfyller kraven för godkänt i kursprojektet och som
 
 ## Förberedelse
 
-- `npm install`, `pip install -r requirements.txt`, `cp .env.example .env`, `npm run db:up`, `npm run db:reset`.
-- **Klart när:** `npm test` ger 16 gröna.
+- `npm install`, `python3 -m venv .venv`, `.venv/bin/pip install -r requirements.txt`, `cp .env.example .env`, `npm run db:up`, `npm run db:reset`.
+- Databasen använder port 5434, eftersom 5432 och 5433 är upptagna av de tidigare övningsprojekten.
+- Aktivera den virtuella miljön med `source .venv/bin/activate` innan du kör `npm test` eller startar `claude`. API:t anropar `python3` från PATH, och utan miljön saknas `psycopg` så att pristestet blir rött.
+- **Klart när:** `npm test` ger 16 gröna. Kontrollerat 2026-11-17.
 
 ## Steg 1: Behörigheter
 

@@ -6,7 +6,7 @@ import os, sys, json, datetime
 from decimal import Decimal
 import psycopg
 
-DB = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/butik")
+DB = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5434/butik")
 conn = psycopg.connect(DB, autocommit=True)
 
 MOMS = 25

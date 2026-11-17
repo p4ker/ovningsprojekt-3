@@ -9,8 +9,8 @@ const sql = ["schema.sql", "seed.sql"]
   .join("\n");
 
 const urls = [
-  process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/butik",
-  process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/butik_test",
+  process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5434/butik",
+  process.env.TEST_DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5434/butik_test",
 ];
 
 async function main(): Promise<void> {

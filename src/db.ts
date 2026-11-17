@@ -2,5 +2,5 @@ import { Pool } from "pg";
 
 export const db = new Pool({
   connectionString:
-    process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/butik",
+    process.env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5434/butik",
 });
