@@ -6,7 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Övningsprojekt för delkursen *AI-assisterad systemutveckling*: ett REST-API för en butik (kunder och beställningar) plus en äldre prisberäkning i Python som ska moderniseras. Kod, kommentarer, felmeddelanden och dokumentation skrivs på svenska.
 
-De tomma katalogerna `.claude/agents/`, `.claude/skills/`, `docs/adr/` och `sessions/` är avsedda för kursprojektets "rigg" (agenter, skills, beslutsloggar, sessionsanteckningar).
+Repot innehåller också kursprojektets rigg, alltså det som styr hur agenten arbetar: behörigheter och hooks i `.claude/settings.json`, subagenter i `.claude/agents/`, skills i `.claude/skills/`, beslutsloggar i `docs/adr/` och sessionsloggar i `sessions/`. Riggen ändras bara med commits. Planen för hur den byggdes står i `docs/rigg-plan.md`.
+
+## Arbetsflöde
+
+Varje arbete görs på en egen gren (`funktion/<mapp>`) och går genom faserna nedan. Varje fas lämnar en fil i `docs/<mapp>/`, och nästa fas läser den filen. Kör `/clear` mellan faserna.
+
+| Fas | Körs med | Lämnar | Människan |
+|---|---|---|---|
+| Research | `/research <mapp> <story>` | `research.md` med förslag på acceptanskriterier | rättar kriterierna och sätter `Status: godkänd` |
+| Plan | subagenten `planerare` | `plan.md`, och ADR-utkast i `docs/adr/` | godkänner planen och sätter `Status: beslutad` i ADR:en |
+| Bygg | `/tdd <mapp> <steg>`, en gång per steg | test, kod och `Status: klart` i planen | godkänner varje commit |
+| Granska | `/granska <mapp> [gren]` | `granskning.md` | väljer vilka fynd som åtgärdas |
+| Verifiera | `/verifiera <mapp>` | `verifiering.md` | kontrollerar bevisen |
+| Avsluta | `/sessionslogg`, sedan `/exit` | `sessions/ÅÅÅÅ-MM-DD-n.md` | committar loggen |
+
+Regler för flödet:
+
+- Planera inte förrän kriterierna är godkända, och bygg inte förrän ADR:en är beslutad. Beslut med ett verkligt alternativ skrivs som ADR enligt `docs/adr/mall.md`. En beslutad ADR ändras inte, utan ersätts av en ny.
+- Varje commit hänvisar till steget i planen och, där det finns, till en ADR: `Avbryt egen ny beställning (plan steg 1, ADR 0001)`.
+- Granskning och verifiering rättar ingenting. Det som ska åtgärdas blir ett nytt steg med `/tdd`.
+- Varje arbetspass avslutas med `/sessionslogg`. Loggen committas efter att sessionen har avslutats, eftersom hooken lägger till faktadelen först då.
+
+Hooks som körs automatiskt (`.claude/hooks/`):
+
+- `las-logg` läser in förra passets logg när en session startar. `skriv-logg` lägger till fakta i loggen när sessionen avslutas eller komprimeras.
+- `kontrollera-kodstandard` kör Prettier, ESLint och `tsc` efter varje ändring i en `.ts`-fil.
+- `skydda-tester` stoppar ändringar som tar bort eller stänger av tester. Skriv aldrig i testfiler från terminalen (`sed -i`, `>`). Använd Edit eller Write.
+- `skydda-hemligheter` stoppar hemligheter i koden och skrivningar till `.env`.
+
+När en hook stoppar något rättar du orsaken. Gå inte runt hooken. Varje stopp loggas i `sessions/fangster.log`.
 
 ## Kommandon
 
@@ -23,6 +52,7 @@ npm run test:legacy  # pytest, letar efter tests/test_*.py (inga finns än)
 npm run lint         # ESLint på src och tests
 npm run typecheck    # tsc --noEmit
 npm run format:check # Prettier (format skriver om)
+npm run check        # lint, typkontroll och formateringskontroll i följd
 npm run dev          # tsx watch, API på http://localhost:3000
 ```
 
@@ -54,7 +84,7 @@ Pröva API:t manuellt: `curl http://localhost:3000/orders/1042/price -H "X-Custo
 
 ## Kodstandard
 
-Reglerna står i `docs/standard.md` och kontrolleras inte automatiskt än (att göra dem kontrollerbara via verktyg och hooks ingår i kursprojektet). De viktigaste:
+Reglerna står i `docs/standard.md`. Några av dem kontrolleras automatiskt: ESLint stoppar SQL som byggs med strängmallar eller sammanslagning i `query(...)` och tester med `skip` eller `only` (`eslint.config.js`), och hooks stoppar borttagna tester och hemligheter. Resten kontrolleras i granskningen. De viktigaste:
 - JSON-fält i camelCase. Byt namn på snake_case-kolumner i SQL med `AS "fältnamn"`.
 - All SQL parametriserad, inga N+1-loopar (använd JOIN eller `= ANY($1)`), skrivningar som hör ihop körs i en transaktion.
 - Felsvar har alltid formen `{ "error": { "code", "message" } }`. En tom sökning ger 200 med tom lista.
