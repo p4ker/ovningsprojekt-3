@@ -8,3 +8,4 @@ src/legacy/price_calc.log
 .venv/
 .claude/.pass-start
 .claude/tmp/
+.claude/.sessionstarter.log

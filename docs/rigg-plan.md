@@ -48,9 +48,11 @@ Mål: den minsta rigg som uppfyller kraven för godkänt i kursprojektet och som
 
 **Filer:**
 - `.claude/hooks/las-logg.mjs` (**SessionStart**). Läser `source` från stdin:
-  - `startup` och `resume`: sparar passets starttid i `.claude/.pass-start` (läggs i `.gitignore`). Skriver sedan rubriken "Förra passets logg" och den senaste filen i `sessions/` till stdout, med kod 0. Om filen har markeringen "Ingen sammanfattning skrevs" lägger den till: "Förra passet saknar sammanfattning. Skriv den först utifrån faktadelen och git log." Om `sessions/` har ändringar som inte är committade påminner den om att committa loggen.
+  - `startup`: sparar passets starttid i `.claude/.pass-start` (läggs i `.gitignore`). Skriver sedan rubriken "Förra passets logg" och den senaste filen i `sessions/` till stdout, med kod 0. Om filen har markeringen "Ingen sammanfattning skrevs" lägger den till: "Förra passet saknar sammanfattning. Skriv den först utifrån faktadelen och git log." Om `sessions/` har ändringar som inte är committade påminner den om att committa loggen.
+  - `resume` och `fork`: behåller starttiden och skriver loggen igen, utan uppmaningar. Ett återupptaget samtal är samma pass. Om starttiden byttes skulle `skriv-logg` inte hitta loggen som redan skrivits under passet. Det hände i skrivbordsappen under bygget av riggen.
   - `compact`: skriver loggen igen, utan uppmaningen och utan att ändra starttiden.
   - `clear`: gör ingenting. `/clear` körs mellan faserna och är inte ett nytt pass.
+  - Varje körning antecknas med tid och `source` i `.claude/.sessionstarter.log` (i `.gitignore`), så att det går att se i efterhand varför en starttid byttes.
 - `.claude/hooks/skriv-logg.mjs` (**SessionEnd** och **PreCompact**, med `"timeout": 60` i `settings.json`):
   - Gör ingenting när `reason` är `clear`.
   - Letar upp passets logg i `sessions/`. Den känns igen på raden `Pass: <starttiden>`, där starttiden kommer från `.claude/.pass-start`. Loggar från tidigare pass har en annan starttid och räknas inte, även om de är från samma dag. En logg som skrevs under passet men saknar raden får den tillagd.

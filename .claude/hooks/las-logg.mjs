@@ -2,16 +2,22 @@
 // SessionStart: läser in förra passets sessionslogg i agentens kontext.
 // Det som skrivs på stdout med kod 0 hamnar i kontexten.
 //
-// source = startup | resume  -> nytt pass: spara starttid, skriv loggen, påminn vid behov
+// source = startup          -> nytt pass: spara starttid, skriv loggen, påminn vid behov
+// source = resume | fork     -> samma pass fortsätter: behåll starttiden, skriv loggen
 // source = compact           -> skriv loggen igen, utan påminnelser
 // source = clear             -> gör ingenting (/clear körs mellan faserna, inte mellan pass)
+//
+// Ett återupptaget samtal är samma pass. Om starttiden byttes vid resume skulle
+// skriv-logg inte längre hitta loggen som redan skrivits under passet.
+// Varje körning antecknas i .claude/.sessionstarter.log, så att det går att se i efterhand.
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 const root = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const sessions = path.join(root, "sessions");
 const passStart = path.join(root, ".claude", ".pass-start");
+const handelser = path.join(root, ".claude", ".sessionstarter.log");
 const MARKERING = "Ingen sammanfattning skrevs.";
 
 function lasIndata() {
@@ -42,10 +48,14 @@ function ocommittadeLoggar() {
 
 try {
   const source = lasIndata().source ?? "startup";
-  if (source === "clear") process.exit(0);
+  const nu = new Date().toISOString();
 
-  const nyttPass = source !== "compact";
-  if (nyttPass) writeFileSync(passStart, new Date().toISOString() + "\n");
+  // Ny starttid bara när ett pass verkligen börjar, eller när ingen starttid finns.
+  const nyttPass = source === "startup" || (source !== "clear" && !existsSync(passStart));
+  if (nyttPass) writeFileSync(passStart, nu + "\n");
+  appendFileSync(handelser, `${nu}\t${source}\t${nyttPass ? "ny starttid" : "behöll starttiden"}\n`);
+
+  if (source === "clear") process.exit(0);
 
   const namn = senasteLogg();
   if (!namn) {
@@ -54,7 +64,7 @@ try {
   }
 
   const text = readFileSync(path.join(sessions, namn), "utf8");
-  console.log(`# Förra passets logg (sessions/${namn})\n`);
+  console.log(`# ${nyttPass ? "Förra passets logg" : "Senaste sessionslogg"} (sessions/${namn})\n`);
   console.log(text.trim());
 
   if (nyttPass) {
