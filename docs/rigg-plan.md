@@ -149,7 +149,7 @@ Meddelandet blir "Tester får ändras men inte tas bort eller stängas av. Rätt
 3. ADR:en committas tillsammans med planen, före koden. Till exempel: `ADR 0001: <beslutet>`.
 4. Commits som bygger på beslutet hänvisar till det, till exempel `(plan steg 2, ADR 0001)`.
 
-**Klart när:** `/agents` visar alla fyra. Be utforskaren hitta var ägarkontrollen för beställningar görs. Den ska svara med fil och rad.
+**Klart när:** alla fyra går att anropa i en ny session. Kommandot `/agents` finns inte längre i Claude Code, så kontrollen görs genom att köra dem. Be utforskaren hitta var ägarkontrollen för beställningar görs. Den ska svara med fil och rad.
 **Commit:** `Rigg: fyra subagenter med verktyg och modell, och ADR-mall`
 
 ## Steg 8: Skills för arbetsflödet
