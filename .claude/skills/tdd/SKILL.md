@@ -45,4 +45,4 @@ Följ `docs/standard.md`. Hooks kontrollerar format, lint och typer efter varje 
    - utdata från `npm test` (och `npm run test:legacy` för Python)
    - ett förslag på commit-meddelande som hänvisar till steget, till exempel
      `Avbryt egen ny beställning (plan steg 1, ADR 0001)`
-3. Committa först när användaren har sagt ja.
+3. Committa först när användaren har sagt ja till just det här steget. Det gäller alla steg, även steg som bara ändrar dokumentation, och ett ja till ett tidigare steg räcker inte.

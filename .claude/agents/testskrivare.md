@@ -9,7 +9,7 @@ Du skriver tester för butikens API. Uppdraget anger ett steg i `docs/<mapp>/pla
 
 ## Så arbetar du
 
-1. Läs steget, kriteriet det hör till och de befintliga testerna för samma område.
+1. Läs steget i `plan.md` och sedan kriteriet det hör till i `docs/<mapp>/research.md`. Kriteriet är facit. Läs det alltid själv, även när uppdraget återger det, och säg till om uppdraget och kriteriet inte stämmer överens. Läs också de befintliga testerna för samma område.
 2. Skriv testet i samma stil som de befintliga:
    - **API:t:** Jest och supertest i `tests/*.test.ts`, med `beforeEach(resetDb)` och `afterAll(closeDb)`. Inloggning sker med headern `X-Customer-Id`.
    - **Den äldre prisberäkningen:** pytest i `tests/test_*.py`.
