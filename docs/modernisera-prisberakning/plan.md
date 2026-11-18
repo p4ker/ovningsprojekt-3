@@ -95,7 +95,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/jamforelse.test.ts`, `src/pricing/orderPrice.ts` (nytt: `calcOrderPrices(ids: number[]): Promise<Map<number, Price>>`, en enda fråga `SELECT o.id, d.percent, l.quantity, l.unit_price FROM orders o LEFT JOIN discounts d ON d.code = o.discount_code LEFT JOIN order_lines l ON l.order_id = o.id WHERE o.id = ANY($1)`. `discounts.code` är primärnyckel, så en rabatt dubblerar inga rader. Räknar med `price.ts`. Skriver ingen logg än.)
 - Rött/grönt: rött av saknad modul. För att visa att jämförelsen kan avslöja fel: ändra tillfälligt trunkeringen i `price.ts` till avrundning och se testet rött. `git restore src/pricing/price.ts`.
 - Görs inte i det här steget: loggning, `calcPrice` och routen ändras inte, API:t använder fortfarande Python.
-- Status: 
+- Status: klart. `tests/jamforelse.test.ts` var rött av rätt anledning (TS2307, modulen saknades). `src/pricing/orderPrice.ts` gör en fråga med `= ANY($1)` och räknar med `price.ts`. Rabatten används bara när ordern har en kod, som `if kod:` i Python. Jämförelsen gav identiska strängar för seed-ordrarna och 81 skapade ordrar, och alla 3 testerna är gröna. Mutationen avrundade momsen (`+ 50n`) i `price.ts` och gav rött i båda jämförelsetesterna. Den återställdes med `git restore`.
 
 ### Steg 9: TypeScript-varianten skriver samma loggrad
 - Kriterium: 14, och 20.
