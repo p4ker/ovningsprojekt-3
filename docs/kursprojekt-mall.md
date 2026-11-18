@@ -4,7 +4,7 @@ Dokumentation enligt mallen i kursprojektet (AI-assisterad systemutveckling). L�
 
 För godkänt: fyll i svaret och visa var i repot det finns (fil, commit eller sessionslogg). För väl godkänt: skriv också vilket alternativ du valde bort och varför, och stöd valet med en siffra (tokens, tid, kronor eller antal fel som en kontroll fångade).
 
-Läget 2026-11-17: avsnitten om riggen är ifyllda utifrån bygget, generalprovet och den nya funktionen (user story 2, "Avbryta en beställning", sammanslagen i pull request #1). Avsnitt märkta "Inte ifyllt än" väntar på granskningen av det utdelade pull requestet, moderniseringen eller egna bedömningar.
+Läget 2026-11-18: avsnitten om riggen är ifyllda utifrån bygget, generalprovet och den nya funktionen (user story 2, "Avbryta en beställning", sammanslagen i pull request #1). Avsnittet Modernisering är ifyllt utifrån moderniseringen av prisberäkningen, som slogs ihop i pull request #2. Avsnitt märkta "Inte ifyllt än" väntar på granskningen av det utdelade pull requestet eller på egna bedömningar.
 
 Commit-hasharna för den nya funktionen är de som finns på `main`. Pull requestet slogs ihop med rebase, så grenen `funktion/avbryta-en-beställning` har samma ändringar med andra hashar. Sessionsloggen `sessions/2026-11-17-2.md` använder grenens hashar.
 
@@ -335,36 +335,121 @@ _Inte ifyllt än._
 
 ## Modernisering
 
-_Inte ifyllt än: arbetet är inte påbörjat._
+Prisberäkningen i `src/legacy/price_calc.py` flyttades till TypeScript i `src/pricing/`, och nattrapporten skrevs om som `jobs/nattrapport.ts`. Det var en ren refaktorering: beteendet för `GET /orders/:id/price` och för nattrapporten ändrades inte, inte heller egenheterna. Python-koden ligger kvar oförändrad parallellt och anropas inte. Den tas bort i en separat uppgift.
 
-Två iakttagelser från bygget av riggen som hör hit:
+Arbetet gick igenom samma faser som den nya funktionen:
+- research: 22 godkända kriterier
+- plan: 12 steg, plus ADR 0002 och 0003
+- bygg med `/tdd`
+- granskning: inga säkerhetsfynd och sju noteringar
+- verifiering: alla 22 kriterier uppfyllda
 
-- `GET /orders/1042/price` svarar `{"net":"950","vat":"237.5","total":"1187.5"}`. Kodstandarden kräver strängar med två decimaler.
-- `price_calc.py` får bara ett beställnings-id och har ingen egen ägarkontroll. `jobs/nightly_report.py` anropar den direkt, utan att gå genom API:t.
+Det slogs ihop i pull request #2 med rebase.
+
+Två beslut hade verkliga alternativ:
+- **Nattrapporten skrivs om i TypeScript (ADR 0002).** Bortvalt var ett tunt Python-skal som anropar TypeScript per order, eftersom det ger en Node-process per order. Också bortvalt var att behålla Python-beräkningen för rapporten, eftersom den då finns på två ställen, vilket `docs/standard.md` förbjuder.
+- **Beloppen räknas som `BigInt` i ören (ADR 0003).** Bortvalt var PostgreSQL `NUMERIC`, eftersom formatet från `str(Decimal)` inte går att få identiskt utan extra SQL och beräkningen då inte går att testa utan databas. Också bortvalt var `decimal.js`, som är ett nytt beroende och ändå hade krävt egen formattering.
+
+Två iakttagelser från bygget av riggen gällde det här arbetet. Båda bevarades medvetet:
+
+- `GET /orders/1042/price` svarar `{"net":"950","vat":"237.5","total":"1187.5"}`, alltså inte strängar med två decimaler som kodstandarden kräver. Formatet ingår i beteendet som inte fick ändras (ADR 0003).
+- `price_calc.py` har ingen egen ägarkontroll, och `jobs/nightly_report.py` anropar den direkt. Ägarkontrollen finns kvar i routen (`getOrder`), och den nya rapporten använder samma beräkning som API:t.
+
+_Var i repot:_ `docs/modernisera-prisberakning/` (research, plan, granskning, verifiering), `docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md`, `docs/adr/0003-belopp-som-bigint-i-oren-med-trunkering.md`, `sessions/2026-11-18-1.md`. Commitarna `574768b` till `b01e3c3` på `main`.
 
 ### Codemap: moduler, ansvar och beroenden i den äldre delen
 
-_Inte ifyllt än._
+Kartan gjordes i researchen innan något ändrades (`docs/modernisera-prisberakning/research.md`, avsnittet Codemap):
+
+```
+GET /orders/:id/price  (src/routes/orders.ts)
+  ├─ requireCustomer            src/auth.ts                 401
+  ├─ parseId                    src/routes/orders.ts        400
+  ├─ getOrder                   src/services/orderService.ts  404 / 403
+  └─ calcPrice(id)              src/pricing/legacyPrice.ts
+        └─ execFile("python3", price_calc.py <id>)   ärver DATABASE_URL
+              └─ calc_price(order_id)
+                    ├─ orders.discount_code
+                    ├─ order_lines.quantity, unit_price
+                    ├─ discounts.percent
+                    ├─ _kapa (trunkering)
+                    └─ append till price_calc.log
+
+cron på driftservern → jobs/nightly_report.py
+  ├─ from price_calc import calc_price, conn   (ansluter vid import)
+  ├─ conn: betalda ordrar för en dag
+  └─ calc_price(oid).total per order  → en rad på stdout
+```
+
+| Modul | Ansvar | Beroenden | Användare |
+|---|---|---|---|
+| `src/legacy/price_calc.py` | Räknar netto, moms och total för en order. CLI som skriver JSON. Loggar varje beräkning. | `psycopg`, `DATABASE_URL`, tabellerna `orders`, `order_lines`, `discounts` | `legacyPrice.ts` (som process), `nightly_report.py` (som modul) |
+| `src/pricing/legacyPrice.ts` | Brygga: startar skriptet, tolkar stdout, alla fel blir `not_found`. | `python3` i `PATH`, `.venv` med `psycopg` | `src/routes/orders.ts` |
+| `jobs/nightly_report.py` | Summerar `total` för en dags betalda ordrar. | `calc_price`, `conn` och klassen `Pris` | cron, utanför repot |
+
+Det viktigaste kartan visade var att modulen har två användare med olika gränssnitt. API:t använder CLI:t med JSON på stdout. Rapporten importerar `calc_price` och `conn` direkt och kräver att `.total` går att addera. Därför behövdes ADR 0002, och därför fick Python-koden ligga kvar parallellt tills båda användarna var flyttade.
+
+Efter arbetet ser flödet ut så här: `calcPrice` (`src/pricing/calcPrice.ts`) → `calcOrderPrices` (`orderPrice.ts`, en fråga med `= ANY($1)`) → `computePrice` (`price.ts`, `BigInt`) och `writePriceLog` (`priceLog.ts`). `jobs/nattrapport.ts` anropar `calcOrderPrices` direkt.
 
 ### Karakteriseringstester: vilket beteende de fångar, även buggar
 
+Testerna skrevs mot Python innan något flyttades, i plan steg 1–6, och deras förväntningar har inte ändrats efteråt. De var gröna direkt. Att de kan bli röda visades i varje steg med en tillfällig mutation i Python-koden eller routen. Mutationen återställdes med `git restore` och committades aldrig. Kolumnen "Är det en bugg?" är min bedömning.
+
 | Test | Beteende som fångas | Är det en bugg? |
 |---|---|---|
-|  |  |  |
+| `tests/price.test.ts:36` | Exakta strängar för seed-ordrarna 1040–1047. | Nej. Det är referensen. |
+| `tests/price.test.ts:53`, `:59`, `:72` | Netto och moms trunkeras mot noll och avrundas inte: 44.9775 → `"44.97"`, 0.855 → `"0.85"`. | Nej. Ekonomi har stämt av mot trunkeringen (kommentaren i `price_calc.py`), men det avviker från vanlig avrundning. |
+| `tests/price.test.ts:87` | Den utgångna koden GAMMAL15 (2024) ger ändå rabatt. Under bygget visade det sig att SOMMAR20 också gått ut (2026-08-31) och ändå tillämpas. | Troligen ja. `valid_from`/`valid_to` läses aldrig, så utgångna koder ger rabatt. |
+| `tests/price.test.ts:94` | En okänd rabattkod ger tyst ingen rabatt och inget fel. | Troligen ja. Kunden får inte veta att koden är fel. |
+| `tests/price.test.ts:106` | Den avbrutna ordern 1046 prissätts. | Oklart. Det kan vara avsiktligt, men en avbruten order borde kanske inte ha ett pris. |
+| `tests/price.test.ts:112`, `:119`, `:125` | Formatet från `str(Decimal)`: `"736.0"`, `"1"`, `"0"`, inte två decimaler. | Ja, mot `docs/standard.md:25`. Det bevarades medvetet (ADR 0003). |
+| `tests/price.test.ts:133`, `:144` | Rabatterna 0 och 100 procent. | Nej. |
+| `tests/price.test.ts:166`–`:184` | 401, 400, 403 och 404 för `/price` med felformatet. | Nej. |
+| `tests/price.test.ts:211`, `:237` | Ett fel i själva beräkningen (tabellen `discounts` saknas) ger 404 `not_found`. | Ja. Ett driftfel ser ut som "finns inte" och loggas inte. Det bevarades medvetet (research, Besvarat 3b). |
+| `tests/price.test.ts:219`, `:245` | En loggrad per lyckad beräkning, och svaret blir rätt även när loggen inte går att skriva. | Nej, men loggfilen växer utan rotation. |
+| `tests/nattrapport.test.ts:50`–`:101` | Rapportens exakta rad, `totalt 0 kr` för en tom dag, dagens datum utan argument, att summan får den längsta termens decimaler och en loggrad per order. | Nej. Det är referensen för ADR 0002. |
+| `tests/test_legacy_cli.py:20`–`:41` | Python-CLI:t (JSON och exit-kod) och att `calc_price` ger `Decimal` som går att addera. | Nej. Testerna låser det gränssnitt som rapporten behövde. |
+
+Ett beteende ändrades medvetet: en rabattkod med apostrof gav ett SQL-fel och därmed 404, eftersom SQL:en byggdes med `%`. Med parametriserad SQL ger den i stället ingen rabatt. Det godkändes som en följd av kodstandarden (research, Besvarat 3c) och är inte karaktäriserat.
+
+Planeraren hittade att kriterium 3 (0.99 med 10 procent, summa 0.891) inte skilde trunkering från avrundning, eftersom båda ger 0.89. Testet på `:72` med 0.855 lades därför till. Mutationen med `ROUND_HALF_UP` i steg 2 gav rött i 0.855-testet men inte i 0.891-testet, vilket bekräftade fyndet.
+
+_Var i repot:_ `tests/price.test.ts`, `tests/nattrapport.test.ts`, `tests/test_legacy_cli.py`. Mutationerna och utfallen står i statusraden för varje steg i `docs/modernisera-prisberakning/plan.md`.
 
 ### Stegen: minst tre, med commit och grönt efter varje
 
+Varje steg kördes med `/tdd` och fick ett eget ja före commit. Antalet tester är de som kördes före varje commit. Hasharna är de som finns på `main`. Sessionsloggen `sessions/2026-11-18-1.md` använder grenens hashar, eftersom pull request #2 slogs ihop med rebase.
+
 | Steg | Vad som ändrades | Commit | Tester efter steget |
 |---|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
+| 1 | pytest för Python-CLI:t och `calc_price`, och `conftest.py` mot testdatabasen | `9251fd3` | Jest 40/40, pytest 4/4 |
+| 2 | Karaktärisering: seed-priserna och trunkeringen | `c75484b` | Jest 52/52, pytest 4/4 |
+| 3 | Karaktärisering: rabattegenheterna och talformatet | `7913761` | Jest 60/60, pytest 4/4 |
+| 4 | Karaktärisering: 400, 401, 403 och 404 för `/price` | `8187384` | Jest 66/66, pytest 4/4 |
+| 5 | Karaktärisering: fel i beräkningen och loggraden | `7893fa4` | Jest 71/71, pytest 4/4 |
+| 6 | Karaktärisering: nattrapporten som underprocess, där `NATTRAPPORT` väljer variant | `61ec4ef` | Jest 79/79, pytest 4/4 |
+| 7 | `src/pricing/price.ts`: `BigInt` och formatet från `str(Decimal)`, vid sidan av Python | `ec1f772` | Jest 112/112, pytest 4/4 |
+| 8 | `calcOrderPrices` med en fråga, och jämförelsetest mot Python på 81 ordrar | `acb9f14` | Jest 115/115, pytest 4/4 |
+| 9 | `priceLog.ts`: samma loggrad som Python | `c080afd` | Jest 124/124, pytest 4/4 |
+| 10 | `calcPrice` räknar i TypeScript, och API:t startar inte längre `python3` | `547ac98` | Jest 125/125, pytest 4/4 |
+| 11 | `jobs/nattrapport.ts` och `npm run rapport:natt`, och `jobs/` i verktygen | `b2b5cac` | Jest 125/125, pytest 4/4 |
+| 12 | Dokumentation i `docs/api.md` och `README.md`, och `CLAUDE.md` i en egen riggcommit | `3f00a32`, `a9dfe66` | Jest 125/125, pytest 4/4 |
+
+`npm run check` var rent efter varje steg. Steg 1–6 lade bara till tester och ändrade ingen produktionskod. Steg 7–9 byggde den nya koden vid sidan av den gamla utan att något anropade den. Omkopplingen kom först i steg 10 och 11, när beteendet redan var låst och jämförelsetestet visade att båda implementationerna gav samma strängar.
 
 ### Migreringsplan för databasen i expand/contract-steg, och vilka steg som går att backa
 
+Moderniseringen ändrar inte schemat. Den nya beräkningen läser samma tre tabeller och samma kolumner som Python-koden, och den lagrar ingenting (research, "Kräver schemaändring?"). En databasmigrering är planerad som en separat uppgift (research, Besvarat 7).
+
+Själva bytet av implementation gjordes ändå i samma mönster:
+
 | Steg | Typ (expand / migrera / contract) | Vad som görs | Går att backa? |
 |---|---|---|---|
-|  |  |  |  |
+| Plan steg 7–9 | expand | TypeScript-implementationen byggs vid sidan av Python, och inget anropar den. | Ja. Inget beror på den nya koden än. |
+| Plan steg 10–11 | migrera | API:t och nattrapporten kopplas om till TypeScript. Python ligger kvar oförändrad. | Ja. Med `git revert` av steg 10 och 11 används Python igen. Cron kan peka på `nightly_report.py` tills den ändras. |
+| Separat uppgift | contract | Python-koden, Python-testerna och jämförelsetestet tas bort. | Bara med `git revert`. Efter det finns ingen parallell implementation att falla tillbaka på. |
+
+_Var i repot:_ `docs/modernisera-prisberakning/research.md` (Besvarat 7 och 8), `docs/modernisera-prisberakning/plan.md` (Utanför planen).
 
 ## Mätningar
 
@@ -372,11 +457,24 @@ _Inte ifyllt än._
 |---|---|---|---|
 | Ny funktion | Huvudagenten (Opus 5.5): 271 in, 12,6k ut, 14,9M cache read, 138,8k cache write. Subagenterna: 218 165. | API 16 min, väggtid 14 min | 7,12 dollar |
 | Granskning av agentgenererad kod | _Inte ifyllt än_ |  |  |
-| Modernisering | _Inte ifyllt än_ |  |  |
+| Modernisering | Huvudagenten (Opus 5.5): 538 in, 25,1k ut, 47,6M cache read, 288,5k cache write. Subagenterna: 468 473. | API 46 min, väggtid 39 min | 18,98 dollar |
 
 Bygget av riggen är inget av de tre arbetena, men det är mätt. Enligt `/usage` den 17 november: 23,55 dollar, 34 minuter API-tid och 37 minuter väggtid.
 
 Siffrorna för den nya funktionen kommer från `/usage` kl. 22:44 UTC, efter verifieringen. Väggtiden på 14 minuter är kortare än passet: passet startade 21:43 UTC och den sista commiten före mätningen gjordes 22:41 UTC. Siffrorna täcker alltså troligen bara den del av passet som kördes efter ett sessionsbyte, och research-fasen ingår sannolikt inte. Subagenternas tokens är räknade för alla faser.
+
+Siffrorna för moderniseringen kommer från `/usage` kl. 10:59 UTC den 18 november, efter verifieringen (`sessions/2026-11-18-1.md`, Mätning). Väggtiden på 39 minuter är kortare än passet, som startade 07:28 UTC. Det är samma mönster som för den nya funktionen, så siffrorna täcker troligen inte hela passet. Pull request #2 och ifyllandet av den här mallen gjordes efter mätningen och ingår inte.
+
+Subagenternas 468 473 tokens är summan av de 14 körningarna under passet, enligt verktygets egen rapport efter varje körning:
+
+| Subagent | Körningar | Tokens |
+|---|---|---|
+| `testskrivare` | 11 | 289 394 |
+| `utforskare` | 1 | 78 478 |
+| `planerare` | 1 | 56 285 |
+| `granskare` | 1 | 44 316 |
+
+Moderniseringen kostade ungefär 2,7 gånger så mycket som den nya funktionen (18,98 mot 7,12 dollar). Den hade 12 plansteg i stället för 5 och elva körningar av `testskrivare`.
 
 _Var i repot:_ `sessions/2026-11-17-1.md` och `sessions/2026-11-17-2.md` (avsnitten Mätning).
 
