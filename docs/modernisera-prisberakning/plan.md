@@ -63,7 +63,12 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/price.test.ts`.
 - Rött/grönt: gröna direkt. Mutationer: (1) i `src/pricing/legacyPrice.ts:14` byt `"not_found"` mot `"conflict"`: rött i (a) (409). (2) i `price_calc.py:53` byt ordningen på `order_id` och `total`: rött i (b). (3) ta bort `try/except` runt loggen (`:51-56`): rött i (d). `git restore` efter varje.
 - Görs inte i det här steget: TypeScript-implementationen, nattrapporten.
-- Status: 
+- Status: klart. Fem nya tester i `tests/price.test.ts` (rad 190) var gröna direkt. Fallet (c) täcks av två tester: ett för 9999 och ett för 1041 utan `discounts`. Mutationerna, var och en återställd med `git restore`:
+  1. `conflict` i `legacyPrice.ts:14` gav (a) och (c) för 1041 röda (409).
+  2. Ombytt ordning i loggraden gav (b) rött.
+  3. Utan `try/except` blev (d) rött (404), och katalogen städades ändå i `finally`.
+
+  Efteråt är `price_calc.log` en vanlig fil. Ingen produktionskod ändrades.
 
 ### Steg 6: Nattrapporten är låst (kriterium 15, 16)
 - Kriterium: 15 och 16.
