@@ -25,7 +25,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/conftest.py` (nytt: sätter `os.environ["DATABASE_URL"]` till `TEST_DATABASE_URL` (med samma standardvärde som `tests/helpers/env.ts`) före varje import av `price_calc`, och kör om `db/schema.sql` och `db/seed.sql` via `psycopg` i en fixture före varje test), `tests/test_legacy_cli.py`, vid behov `pytest.ini` (testsökväg).
 - Rött/grönt: testerna är gröna direkt mot dagens Python. Visa att de kan bli röda: ändra tillfälligt `sys.exit(1)` till `sys.exit(0)` i `price_calc.py` (röd (b)) och `"finns inte"` till `"saknas"` (röd (b)); ändra `print(json.dumps(...))` så att `total` skrivs med `float` (röd (a)). Kör, se rött, `git restore src/legacy/price_calc.py`.
 - Görs inte i det här steget: Jest-tester, någon ändring i Python-koden eller i TypeScript.
-- Status: 
+- Status: klart. De fyra testerna i `tests/test_legacy_cli.py` var gröna direkt mot Python (4 passed). Mutationerna, var och en återställd med `git restore` och inte committad: `"saknas"` i stället för `"finns inte"` gav rött i (b) på utdata. `sys.exit(0)` ensam gav rött i (b) på exit-koden (`0 == 1`). `float(p.total)` gav rött i (a) (`1187.5` utan citattecken). Ingen produktionskod ändrades.
 
 ### Steg 2: Priset för seed-ordrarna och trunkeringen är låsta (kriterium 1, 2, 3, 6)
 - Kriterium: 1, 2, 3 och 6.
