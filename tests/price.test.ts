@@ -271,3 +271,19 @@ describe("GET /orders/:id/price, fel i beräkningen och logg", () => {
     }
   });
 });
+
+describe("GET /orders/:id/price, utan Python", () => {
+  it("räknar priset utan att starta python3", async () => {
+    const ursprungligPath = process.env.PATH;
+    const tomKatalog = fs.mkdtempSync(path.join(os.tmpdir(), "utan-python-"));
+    try {
+      process.env.PATH = tomKatalog;
+      const res = await request(app).get("/orders/1042/price").set("X-Customer-Id", "1");
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ net: "950", vat: "237.5", total: "1187.5" });
+    } finally {
+      process.env.PATH = ursprungligPath;
+      fs.rmSync(tomKatalog, { recursive: true, force: true });
+    }
+  });
+});

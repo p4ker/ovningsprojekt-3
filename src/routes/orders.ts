@@ -2,7 +2,7 @@ import { Router } from "express";
 import { AuthedRequest, requireCustomer } from "../auth";
 import { sendError, sendResult } from "../http";
 import { cancelOrder, createOrder, getOrder } from "../services/orderService";
-import { calcPrice } from "../pricing/legacyPrice";
+import { calcPrice } from "../pricing/calcPrice";
 
 export const orders = Router();
 
@@ -37,7 +37,7 @@ orders.post("/orders/:id/cancel", requireCustomer, async (req, res) => {
   sendResult(res, await cancelOrder(id, (req as AuthedRequest).customerId));
 });
 
-// Pris för en egen beställning. Räknas av den äldre modulen src/legacy/price_calc.py.
+// Pris för en egen beställning. Räknas av calcPrice i src/pricing/.
 orders.get("/orders/:id/price", requireCustomer, async (req, res) => {
   const id = parseId(req.params.id);
   if (id === null) {
