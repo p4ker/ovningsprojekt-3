@@ -41,7 +41,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/price.test.ts`.
 - Rött/grönt: gröna direkt. Mutationer: (1) i `price_calc.py:66` formatera `total` som `f"{p.total:.2f}"`: rött i (d) och (e). (2) i `price_calc.py:42` lägg till `and valid_to >= current_date` i frågan (efter koden): rött i (a). `git restore` efter varje.
 - Görs inte i det här steget: 400/401/403/404, logg.
-- Status: 
+- Status: klart. Åtta nya tester i `tests/price.test.ts` (rad 79–152) var gröna direkt mot Python, och filen har nu 20 tester. Mutation 1 (`:.2f` på alla fält, rad 66) gav 13 röda, bland dem (b), (d), (e) och (f). Mutation 2 (`and valid_to >= current_date`, rad 42) gav 4 röda: (a), 1045-raden, 1041-raden och (d). 1041 blev rött därför att SOMMAR20 gick ut 2026-08-31. Den är alltså utgången i dag, trots att researchtabellen säger "giltig", och testerna för 1041 låser samma egenhet som (a). Båda mutationerna återställdes med `git restore` och committades inte. Ingen produktionskod ändrades.
 
 ### Steg 4: Felfallen för `/price` är låsta (kriterium 9, 10, 11, 12)
 - Kriterium: 9, 10, 11 och 12.
