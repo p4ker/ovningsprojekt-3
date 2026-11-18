@@ -109,7 +109,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Test först: `tests/price.test.ts`, nytt test. `process.env.PATH` sätts under testet till en katalog som saknar `python3` (återställs i `finally`), och GET `/orders/1042/price` ger 200 med `{ net: "950", vat: "237.5", total: "1187.5" }`. Testet är rött eftersom `execFile("python3")` misslyckas och ger 404. Alla tester från steg 2–5 körs oförändrade och ska vara gröna efteråt.
 - Filer som ändras: `src/pricing/calcPrice.ts` (nytt namn, ersätter `src/pricing/legacyPrice.ts` via `git mv`: `calcPrice(orderId): Promise<Result<Price>>` anropar `calcOrderPrices([orderId])`, och allt som kastas blir `err("not_found", ...)`, så det finns ingen väg som ger något annat), `src/routes/orders.ts` (importen och kommentaren på :40), `tests/price.test.ts`. Typen `Price` och signaturen är oförändrade.
 - Görs inte i det här steget: nattrapporten, dokumentation. `src/legacy/price_calc.py` lämnas oförändrad.
-- Status: 
+- Status: klart. Det nya testet utan `python3` i `PATH` (`tests/price.test.ts:276`) var rött av rätt anledning: 404 i stället för 200. `legacyPrice.ts` flyttades till `calcPrice.ts` med `git mv` och anropar nu `calcOrderPrices`. Alla fel, även kastade, blir `not_found`. Alla 32 tester i `tests/price.test.ts` är gröna. Filen fick bara tillägg (16 rader), så karaktäriseringstesterna från steg 2–5 är oförändrade. Ingen kod i `src/` startar `python3` längre. Python nämns bara i kommentarer. `docs/api.md`, `README.md:51` och `CLAUDE.md:70` nämner fortfarande `legacyPrice.ts`. De rättas i steg 12.
 
 ### Steg 11: Nattrapporten i TypeScript (ADR 0002)
 - Kriterium: 15, 16 och 19 (rapporten använder `calcPrice`/`calcOrderPrices`), 20.
