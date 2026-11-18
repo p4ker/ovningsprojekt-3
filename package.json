@@ -7,12 +7,13 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=.env src/server.ts",
     "start": "tsx --env-file-if-exists=.env src/server.ts",
+    "rapport:natt": "tsx --env-file-if-exists=.env jobs/nattrapport.ts",
     "test": "jest --runInBand",
     "test:legacy": "pytest -q",
-    "lint": "eslint src tests",
+    "lint": "eslint src tests jobs",
     "typecheck": "tsc --noEmit",
-    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\" \"jobs/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\" \"jobs/**/*.ts\"",
     "check": "npm run lint && npm run typecheck && npm run format:check",
     "db:up": "docker compose up -d db",
     "db:reset": "tsx --env-file-if-exists=.env scripts/db-reset.ts"

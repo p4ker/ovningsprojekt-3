@@ -4,9 +4,10 @@ import path from "node:path";
 const root = path.join(__dirname, "..", "..");
 
 // Kör nattrapporten som underprocess. Miljövariabeln NATTRAPPORT väljer kommando:
-// "python" (standard) eller "ts". Underprocessen ärver DATABASE_URL från tests/helpers/env.ts.
+// "ts" (standard) eller "python". Python-varianten går att välja tills Python-koden tas bort.
+// Underprocessen ärver DATABASE_URL från tests/helpers/env.ts.
 export function kor(args: string[]): Promise<{ stdout: string; code: number }> {
-  const variant = process.env.NATTRAPPORT ?? "python";
+  const variant = process.env.NATTRAPPORT ?? "ts";
   let kommando: string;
   let argument: string[];
   if (variant === "python") {
