@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import request from "supertest";
 import { createApp } from "../src/app";
 import { db } from "../src/db";
@@ -182,5 +185,89 @@ describe("GET /orders/:id/price, felfall", () => {
     const res = await request(app).get("/orders/9999/price").set("X-Customer-Id", "1");
     expect(res.status).toBe(404);
     forvantaFelform(res.body, "not_found");
+  });
+});
+
+describe("GET /orders/:id/price, fel i beräkningen och logg", () => {
+  const loggsokvag = path.join(__dirname, "..", "src", "legacy", "price_calc.log");
+
+  function lasLogg(): string {
+    try {
+      return fs.readFileSync(loggsokvag, "utf8");
+    } catch {
+      return "";
+    }
+  }
+
+  function tillagt(fore: string, efter: string): string {
+    expect(efter.startsWith(fore)).toBe(true);
+    return efter.slice(fore.length);
+  }
+
+  async function hamtaPris(orderId: number, kundId: number) {
+    return request(app).get(`/orders/${orderId}/price`).set("X-Customer-Id", String(kundId));
+  }
+
+  it("returnerar 404 med not_found när beräkningen misslyckas (tabellen discounts saknas)", async () => {
+    // Beräkningen felar när rabatten SOMMAR20 slås upp, medan getOrder inte läser discounts.
+    await db.query("DROP TABLE discounts");
+    const res = await hamtaPris(1041, 2);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe("not_found");
+  });
+
+  it("lägger till exakt en loggrad med tid, order-id och total efter ett lyckat anrop för 1042", async () => {
+    const fore = lasLogg();
+    const res = await hamtaPris(1042, 1);
+    expect(res.status).toBe(200);
+    const nytt = tillagt(fore, lasLogg());
+    expect(nytt.endsWith("\n")).toBe(true);
+    const rader = nytt.split("\n").slice(0, -1);
+    expect(rader).toHaveLength(1);
+    expect(rader[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)? 1042 1187\.5$/);
+  });
+
+  it("lägger inte till någon loggrad när ordern inte finns (404 för 9999)", async () => {
+    const fore = lasLogg();
+    const res = await hamtaPris(9999, 1);
+    expect(res.status).toBe(404);
+    expect(tillagt(fore, lasLogg())).toBe("");
+  });
+
+  it("lägger inte till någon loggrad när beräkningen misslyckas (404 för 1041 utan discounts)", async () => {
+    await db.query("DROP TABLE discounts");
+    const fore = lasLogg();
+    const res = await hamtaPris(1041, 2);
+    expect(res.status).toBe(404);
+    expect(tillagt(fore, lasLogg())).toBe("");
+  });
+
+  it("ger ändå 200 med rätt pris när loggen inte går att skriva (en katalog ligger på loggsökvägen)", async () => {
+    const undanstoppad = path.join(os.tmpdir(), `price_calc.log.undan.${process.pid}`);
+    const fannsFran = fs.existsSync(loggsokvag);
+    try {
+      if (fannsFran) {
+        try {
+          fs.renameSync(loggsokvag, undanstoppad);
+        } catch {
+          fs.copyFileSync(loggsokvag, undanstoppad);
+          fs.unlinkSync(loggsokvag);
+        }
+      }
+      fs.mkdirSync(loggsokvag);
+      const res = await hamtaPris(1042, 1);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ net: "950", vat: "237.5", total: "1187.5" });
+    } finally {
+      fs.rmSync(loggsokvag, { recursive: true, force: true });
+      if (fannsFran) {
+        try {
+          fs.renameSync(undanstoppad, loggsokvag);
+        } catch {
+          fs.copyFileSync(undanstoppad, loggsokvag);
+          fs.unlinkSync(undanstoppad);
+        }
+      }
+    }
   });
 });
