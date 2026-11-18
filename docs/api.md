@@ -11,11 +11,19 @@ Alla anrop utom `POST /customers` och `/health` kräver headern `X-Customer-Id` 
 | `POST /orders` | Lägg en beställning. Body: `{ lines: [{ product, quantity, unitPrice }], discountCode? }`. | 201, 400, 401 |
 | `GET /orders/:id` | En egen beställning med rader. | 200, 400, 401, 403, 404 |
 | `POST /orders/:id/cancel` | Avbryt en egen beställning. Ingen body. Det går bara om beställningen har status `new` och lades för högst 30 minuter sedan. Svaret är beställningen med `status: "cancelled"`, i samma form som `GET /orders/:id`. 409 med felkoden `conflict` om 30 minuter har gått eller om statusen inte är `new` (redan avbruten, betald eller skickad); meddelandet säger vilket. En annan kunds beställning ger alltid 403, även när den annars hade gett 409. Se ADR 0001. | 200, 400, 401, 403, 404, 409 |
-| `GET /orders/:id/price` | Pris för en egen beställning: `{ net, vat, total }`. Räknas av den äldre modulen. | 200, 400, 401, 403, 404 |
+| `GET /orders/:id/price` | Pris för en egen beställning: `{ net, vat, total }`. Räknas av `calcPrice` i `src/pricing/` (ADR 0003). Beloppen är strängar i samma format som den äldre modulen gav, till exempel `"950"`, `"736.0"` och `"0"`, alltså inte alltid två decimaler. Alla fel i beräkningen ger 404 med `not_found`. | 200, 400, 401, 403, 404 |
+
+## Nattrapporten
+
+`jobs/nattrapport.ts` summerar en dags betalda ordrar och skriver `<dag>: <antal> betalda ordrar, totalt <summa> kr`. Utan argument gäller dagens datum. Den använder samma beräkning som API:t (ADR 0002).
+
+```bash
+npm run rapport:natt -- 2026-10-01
+```
 
 ## Den äldre modulen
 
-`src/legacy/price_calc.py` räknar pris, rabatt och moms för en beställning. Den är skriven i Python, saknar tester och dokumentation och anropas från två ställen: API:t (via `src/pricing/legacyPrice.ts`) och den nattliga rapporten `jobs/nightly_report.py`.
+`src/legacy/price_calc.py` och `jobs/nightly_report.py` är den tidigare Python-implementationen. De ligger kvar oförändrade parallellt med TypeScript-varianten och används inte av API:t eller av `jobs/nattrapport.ts`. De tas bort i en separat uppgift. Tills dess låser `tests/test_legacy_cli.py` och `tests/jamforelse.test.ts` att de ger samma resultat.
 
 Den går att köra direkt:
 
