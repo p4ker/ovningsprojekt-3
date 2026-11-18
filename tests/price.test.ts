@@ -149,3 +149,38 @@ describe("GET /orders/:id/price, rabatt och format", () => {
     expect(res.body).toEqual({ net: "0", vat: "0", total: "0" });
   });
 });
+
+describe("GET /orders/:id/price, felfall", () => {
+  // Alla felsvar ska ha formen { error: { code, message } } och inga andra fält på toppnivå.
+  function forvantaFelform(body: unknown, kod: string) {
+    expect(Object.keys(body as object)).toEqual(["error"]);
+    const fel = (body as { error: { code: unknown; message: unknown } }).error;
+    expect(fel.code).toBe(kod);
+    expect(typeof fel.message).toBe("string");
+    expect((fel.message as string).length).toBeGreaterThan(0);
+  }
+
+  it("returnerar 401 utan X-Customer-Id", async () => {
+    const res = await request(app).get("/orders/1042/price");
+    expect(res.status).toBe(401);
+    forvantaFelform(res.body, "unauthorized");
+  });
+
+  it.each(["abc", "0", "-1"])("returnerar 400 för ogiltigt id %s", async (id) => {
+    const res = await request(app).get(`/orders/${id}/price`).set("X-Customer-Id", "1");
+    expect(res.status).toBe(400);
+    forvantaFelform(res.body, "invalid_input");
+  });
+
+  it("returnerar 403 när kund 1 hämtar priset för kund 2:s order 1041", async () => {
+    const res = await request(app).get("/orders/1041/price").set("X-Customer-Id", "1");
+    expect(res.status).toBe(403);
+    forvantaFelform(res.body, "forbidden");
+  });
+
+  it("returnerar 404 för en order som inte finns (9999)", async () => {
+    const res = await request(app).get("/orders/9999/price").set("X-Customer-Id", "1");
+    expect(res.status).toBe(404);
+    forvantaFelform(res.body, "not_found");
+  });
+});

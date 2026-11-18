@@ -49,7 +49,13 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/price.test.ts`.
 - Rött/grönt: gröna direkt. Mutationer i `src/routes/orders.ts` (tillfälligt): ta bort `if (!order.ok) { ... return; }`-blocket på :48-51 (rött i (c): 200 i stället för 403), och låt `parseId` returnera `Number(raw)` (rött i (b)). 401 visas röd genom att tillfälligt ta bort `requireCustomer` ur routen. 404 visas röd genom att tillfälligt ersätta `sendError(res, order.error)` med `sendError(res, { code: "conflict", message: "x" })`. `git restore src/routes/orders.ts`.
 - Görs inte i det här steget: logg och fel i beräkningen.
-- Status: 
+- Status: klart. Sex nya tester i `tests/price.test.ts` (rad 153), som alla var gröna direkt. (e) täcks av hjälpfunktionen `forvantaFelform` i varje test. Mutationerna i `src/routes/orders.ts`, var och en återställd med `git restore`:
+  1. Utan blocket `if (!order.ok)` blev (c) rött (200 i stället för 403). (d) förblev grönt, eftersom beräkningen själv ger `not_found` för 9999. Det är alltså (c) som fångar att kontrollen saknas.
+  2. Med `parseId` som `Number(raw)` blev (b) rött. `abc` gav ett ohanterat SQL-fel och timeout, och `0`/`-1` gav 404.
+  3. Utan `requireCustomer` blev (a) rött (403 i stället för 401). Mutationen kräver `as unknown as AuthedRequest` för att kompilera.
+  4. Med `conflict` i stället för `order.error` blev (c) och (d) röda (409).
+
+  Ingen produktionskod ändrades.
 
 ### Steg 5: Fel i beräkningen ger 404 och loggraden skrivs (kriterium 13, 14)
 - Kriterium: 13 och 14.
