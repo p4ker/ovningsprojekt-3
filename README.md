@@ -48,9 +48,10 @@ src/
   app.ts, server.ts        API:t
   routes/                  endpoints
   services/                affärslogik, returnerar Result
-  pricing/legacyPrice.ts   brygga till den äldre prisberäkningen
-  legacy/price_calc.py     den äldre prisberäkningen
-jobs/nightly_report.py     nattlig rapport som också använder price_calc
+  pricing/                 prisberäkningen (calcPrice), i TypeScript
+  legacy/price_calc.py     den äldre prisberäkningen, kvar parallellt tills vidare
+jobs/nattrapport.ts        nattlig rapport (npm run rapport:natt)
+jobs/nightly_report.py     den äldre nattrapporten, kvar parallellt tills vidare
 db/                        schema och testdata
 tests/                     API-tester
 docs/

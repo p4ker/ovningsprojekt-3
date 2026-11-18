@@ -123,7 +123,13 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Test först: inget kodtest. Kontrollen är att `npm test`, `npm run test:legacy` och `npm run check` är gröna, att `git diff main -- src/legacy/price_calc.py jobs/nightly_report.py` är tomt (kriterium 21), och att `rg "price_calc|python3|execFile" src jobs` bara hittar loggsökvägen i `src/pricing/priceLog.ts`. Granskningen kontrollerar kriterium 20 (BigInt, ingen `Number(` på belopp, ingen SQL med strängmallar).
 - Filer som ändras: `docs/api.md` (rad 14: priset räknas i `src/pricing/`, avsnittet på :16-24 om den äldre modulen finns kvar; lägg till raden om nattrapportens kommando `npm run rapport:natt`), `CLAUDE.md` (Arkitektur: att `calcPrice` räknar i TypeScript, att `jobs/nattrapport.ts` ersätter `nightly_report.py` i drift, och att Python-modulen ligger kvar parallellt tills den separata borttagningen. Det görs i en egen commit eftersom det är en riggändring).
 - Görs inte i det här steget: kodändringar, `requirements.txt`.
-- Status: 
+- Status: klart. Kontrollerna:
+  - `npm test` 125 av 125, `npm run test:legacy` 4 av 4 och `npm run check` rent.
+  - `git diff main -- src/legacy/price_calc.py jobs/nightly_report.py` är tomt (kriterium 21).
+  - Sökningen efter `price_calc|python3|execFile` i `src` och `jobs` hittar bara loggsökvägen i `priceLog.ts` och två kommentarer.
+  - Sökningen efter `Number(`, `parseFloat`, `toFixed` och SQL med strängmallar i `src/pricing` och `jobs` ger inga träffar (kriterium 20, slutlig bedömning i granskningen).
+
+  Uppdaterat: `docs/api.md` (rad 14, nytt avsnitt om nattrapporten, avsnittet om den äldre modulen beskriver parallellfasen) och `README.md` (kodkartan, överenskommet i steg 10). `CLAUDE.md` (Arkitektur, Kommandon) committas för sig, eftersom det är en riggändring.
 
 ## Besvarade frågor (2026-11-18)
 
