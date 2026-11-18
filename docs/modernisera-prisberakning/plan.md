@@ -102,7 +102,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Test först: `tests/priceLog.unit.test.ts` (nytt, utan databas). (a) `formatLogTimestamp(new Date(...))` ger lokal tid utan tidszon i formatet `2026-11-18T08:42:41.630000` (millisekunder följda av `000`, Besvarat 9). (b) När millisekunderna är 0 utelämnas bråkdelen: `2026-11-18T08:42:41`. (c) `formatLogLine(now, orderId, total)` ger `<tid> 1042 1187.5` (utan radbrytning), och `writePriceLog(...)` lägger till en rad med `\n` i en tillfällig fil som testet anger. (d) Skrivfel (katalog i stället för fil) kastar inte. Testet är rött eftersom modulen saknas.
 - Filer som ändras: `tests/priceLog.unit.test.ts`, `src/pricing/priceLog.ts` (nytt: använder `node:fs` `appendFileSync` i `try/catch`; standardsökväg `src/legacy/price_calc.log`, som Python; sökvägen kan anges för testet. Inga personuppgifter loggas, `docs/standard.md:30`), `src/pricing/orderPrice.ts` (`calcOrderPrices` anropar `writePriceLog` för varje lyckad order).
 - Görs inte i det här steget: att koppla `calcPrice`. Jämförelsetestet från steg 8 ska fortfarande vara grönt.
-- Status: 
+- Status: klart. `tests/priceLog.unit.test.ts` var rött av rätt anledning (TS2307, modulen saknades). `src/pricing/priceLog.ts` gav 9 av 9 gröna. `calcOrderPrices` skriver nu en loggrad per beräknad order, och efter körningen finns rader som `2026-11-18T11:32:37.820000 1042 1187.5` i loggen. Jämförelsetestet är fortfarande grönt. `kontrollera-kodstandard` stoppade ett mellanläge där anropet lades till före importen (TS2304, `sessions/fangster.log`). Det rättades i nästa ändring.
 
 ### Steg 10: `calcPrice` räknar i TypeScript utan att starta `python3` (kriterium 19)
 - Kriterium: 19 (och 13: fel ger fortfarande `not_found`).
