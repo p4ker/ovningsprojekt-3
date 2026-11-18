@@ -48,12 +48,13 @@ npm run db:up        # PostgreSQL 16 i Docker (skapar även butik_test)
 npm run db:reset     # schema + testdata i BÅDA databaserna (butik och butik_test)
 npm test             # Jest, --runInBand (alla tester ska vara gröna)
 npx jest tests/orders.test.ts -t "returnerar 401"   # en fil / ett test
-npm run test:legacy  # pytest, letar efter tests/test_*.py (inga finns än)
+npm run test:legacy  # pytest: tests/test_legacy_cli.py låser Python-CLI:t (tas bort med Python)
 npm run lint         # ESLint på src och tests
 npm run typecheck    # tsc --noEmit
 npm run format:check # Prettier (format skriver om)
 npm run check        # lint, typkontroll och formateringskontroll i följd
 npm run dev          # tsx watch, API på http://localhost:3000
+npm run rapport:natt -- 2026-10-01   # nattrapporten för en dag (utan argument: i dag)
 ```
 
 Pröva API:t manuellt: `curl http://localhost:3000/orders/1042/price -H "X-Customer-Id: 1"`.
@@ -67,12 +68,17 @@ Pröva API:t manuellt: `curl http://localhost:3000/orders/1042/price -H "X-Custo
 - `src/db.ts` – en delad `Pool` från `DATABASE_URL`.
 - `src/app.ts` exporterar `createApp()` (används av testerna via supertest); `src/server.ts` startar servern.
 
-**Prisberäkningen korsar språkgränsen:** `GET /orders/:id/price` → `calcPrice` i `src/pricing/legacyPrice.ts` → `execFile("python3", src/legacy/price_calc.py <orderId>)`, som läser databasen själv och skriver JSON `{net, vat, total}` (strängar) till stdout. Alla fel från skriptet blir `not_found`. Python-miljön behöver `psycopg` (`requirements.txt`).
+**Prisberäkningen är i TypeScript (ADR 0003):** `GET /orders/:id/price` → `calcPrice` i `src/pricing/calcPrice.ts` → `calcOrderPrices` i `orderPrice.ts`, som hämtar flera ordrar i en fråga. Där räknar `computePrice` i `price.ts` med `BigInt` och formaterar som Pythons `str(Decimal)`, och `priceLog.ts` skriver samma loggrad som Python till `src/legacy/price_calc.log`. Alla fel blir `not_found`. Nattrapporten är `jobs/nattrapport.ts` (`npm run rapport:natt`, ADR 0002). Cron-raden på driftservern ska peka dit.
 
-**`src/legacy/price_calc.py` har fler beroenden än API:t:** `jobs/nightly_report.py` importerar `calc_price` och `conn` direkt (via `sys.path`) och körs av cron i drift. Ändringar i modulens publika gränssnitt måste hålla båda användarna fungerande. Kända egenheter i modulen:
-- Ansluter till databasen redan vid import.
-- `_kapa` trunkerar till två decimaler i stället för att avrunda. Kommentaren säger att ekonomi har stämt av mot den, så beteendet får inte ändras oavsiktligt. Karaktärisera det med tester innan refaktorering.
-- Bygger SQL med `%`-formattering (inte parametriserat), ignorerar `valid_from`/`valid_to` på rabattkoder och skriver en loggfil `price_calc.log` bredvid sig själv.
+**Parallellfas:** `src/legacy/price_calc.py` och `jobs/nightly_report.py` ligger kvar oförändrade, men ingen kod anropar dem. De tas bort i en separat uppgift, tillsammans med `tests/test_legacy_cli.py`, `tests/conftest.py` och `tests/jamforelse.test.ts`. Tills dess bevisar `tests/jamforelse.test.ts` att TypeScript och Python ger samma strängar, så ändra inte beräkningen på bara den ena sidan. Python-testerna behöver `psycopg` (`requirements.txt`).
+
+**Egenheter som bevaras medvetet** finns i båda implementationerna och är karaktäriserade i `tests/price.test.ts` och `tests/nattrapport.test.ts`:
+- Netto och moms trunkeras mot noll till ören i stället för att avrundas. Ekonomi har stämt av mot det, så beteendet får inte ändras oavsiktligt.
+- `valid_from`/`valid_to` på rabattkoder ignoreras, och en okänd kod ger ingen rabatt.
+- Beloppen har formatet från `str(Decimal)` (`"950"`, `"736.0"`), inte alltid två decimaler, vilket avviker från `docs/standard.md`.
+- Varje beräkning lägger till en rad i `src/legacy/price_calc.log`.
+
+Bara Python-modulen ansluter till databasen vid import och bygger SQL med `%`-formattering.
 
 **Databasen:** `db/schema.sql` droppar och skapar om alla tabeller (customers, discounts, orders, order_lines) och saknar främmande nycklar; `db/seed.sql` har testdata. Det finns inget migreringsverktyg än. Enligt `docs/user-stories.md` ska schemaändringar göras som migreringar i steg som går att backa.
 
