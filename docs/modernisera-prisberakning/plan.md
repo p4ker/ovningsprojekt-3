@@ -76,7 +76,11 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/nattrapport.test.ts`, `tests/helpers/nattrapport.ts`.
 - Rött/grönt: gröna direkt mot Python. Mutationer i `jobs/nightly_report.py`: byt `summa += p.total` mot `summa = p.total` (rött i (d)), och byt `kr` mot `SEK` (rött i (a)–(c)). `git restore jobs/nightly_report.py`.
 - Görs inte i det här steget: någon TypeScript-rapport. Jest har bara en testfil för rapporten och ingen fil som är specifik för Python.
-- Status: 
+- Status: klart. Åtta tester i `tests/nattrapport.test.ts` var gröna direkt mot Python. `tests/helpers/nattrapport.ts` har redan grenen `ts` (`npx tsx jobs/nattrapport.ts`), och standardvärdet är `python`. Ordrarna skapas med UTC-tid, eftersom testdatabasen kör i `Etc/UTC`. Mutationerna, var och en återställd med `git restore`:
+  1. `summa = p.total` gav båda (d)-testerna röda.
+  2. `SEK` i stället för `kr` gav sju röda, (a)–(d). Bara loggtestet (e), som inte läser stdout, förblev grönt.
+
+  Ingen produktionskod ändrades.
 
 ### Steg 7: Beräkningen och talformatet i TypeScript, vid sidan av (ADR 0003)
 - Kriterium: 20 (BigInt i ören, utan `number`), förutsättning för 17.
