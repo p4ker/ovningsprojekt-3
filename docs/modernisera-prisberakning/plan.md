@@ -33,7 +33,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Filer som ändras: `tests/price.test.ts`. `tests/orders.test.ts:294-300` ändras inte.
 - Rött/grönt: gröna direkt mot Python. Mutation: i `price_calc.py:25` byt `int(x * 100)` mot `int((x * 100).to_integral_value(rounding=ROUND_HALF_UP))` (med `from decimal import ROUND_HALF_UP`). Förväntat rött: (b) (44.9775 → 44.98), (e) (0.855 → 0.86) och 1044:s `total`, men inte (c). Det senare bevisar Fråga 1. `git restore src/legacy/price_calc.py`.
 - Görs inte i det här steget: rabattegenheter, format, felfall, logg.
-- Status: 
+- Status: klart. De 12 testerna i `tests/price.test.ts` var gröna direkt mot Python. Mutationen med `ROUND_HALF_UP` i `_kapa` gav 3 röda: 1044-raden i (a), (b) (`"44.98"` i stället för `"44.97"`) och (e). (c) förblev grönt, som väntat. Mutationen återställdes med `git restore` och committades inte. Ingen produktionskod ändrades.
 
 ### Steg 3: Rabattegenheterna och talformatet är låsta (kriterium 4, 5, 7, 8)
 - Kriterium: 4, 5, 7 och 8.
