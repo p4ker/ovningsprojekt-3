@@ -4,3 +4,6 @@
 2026-11-17T01:17:59.310Z	skydda-hemligheter	sessions/2026-11-17-1.md	hemlighet direkt i koden (apiKey)
 2026-11-17T22:18:23.054Z	kontrollera-kodstandard	tests/orders.test.ts	eslint: @typescript-eslint/no-unused-vars
 2026-11-17T22:18:52.318Z	kontrollera-kodstandard	src/routes/orders.ts	eslint: @typescript-eslint/no-unused-vars
+2026-11-18T10:05:02.481Z	kontrollera-kodstandard	tests/price.test.ts	eslint: @typescript-eslint/no-unused-vars
+2026-11-18T10:05:02.517Z	skydda-tester	testfiler	kommandot skriver direkt i testfiler. Använd Edit eller Write, så att ändringen kan kontrolleras
+2026-11-18T10:32:22.346Z	kontrollera-kodstandard	src/pricing/orderPrice.ts	tsc: TS2304
