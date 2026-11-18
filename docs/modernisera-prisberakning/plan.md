@@ -87,7 +87,7 @@ Beslut: ADR 0002 (docs/adr/0002-nattrapporten-skrivs-om-i-typescript.md) och ADR
 - Test först: `tests/price.unit.test.ts` (nytt, utan databas). Modulen `src/pricing/price.ts` finns inte, så testet är rött. (a) `parseMoney("19.95")` ger rätt ören utan flyttal, även `"0.99"`, `"1000"`, `"0.10"`. (b) `computePrice(rader, procent)` ger för tabellen i research (1040–1047 som rader och procent) exakt strängarna `net`, `vat`, `total`. (c) Trunkering mot noll: 0.855 → `"0.85"`, 44.9775 → `"44.97"`, och 0.99 med 10 procent → `"0.89"`, `"0.22"`, `"1.11"`. (d) Formatet efterliknar `str(Decimal)`: `"950"`, `"588.8"`, `"0"`, `"736.0"`, `"1187.5"`, och `addDec` ger lika många decimaler som den längsta termen (`1187.5 + 736.0` → `"1923.5"`, `0 + 224.88` → `"224.88"`, heltalet 0 som start ger `"0"`). (e) Procent 0 och 100, och inga rader.
 - Filer som ändras: `tests/price.unit.test.ts`, `src/pricing/price.ts` (nytt: typen `{ units: bigint; scale: number }`, `parseMoney`, `computePrice`, `formatDec`, `addDec`). Ingen databas och ingen I/O.
 - Görs inte i det här steget: SQL, loggning, någon koppling till routen.
-- Status: 
+- Status: klart. `tests/price.unit.test.ts` var rött av rätt anledning (TS2307, modulen saknades). `src/pricing/price.ts` gav 26 av 27 gröna. Det sista testet kunde inte köras, eftersom titeln använde `%j`, som inte kan serialisera `BigInt`. Människan godkände att titeln byttes till `%p`. Påståendet i testet är oförändrat. Nu är 33 av 33 gröna. Ingen koppling till databasen eller routen.
 
 ### Steg 8: Prisuträkning från databasen och jämförelse mot Python (kriterium 17)
 - Kriterium: 17 och 20 (parametriserad SQL, ingen fråga per orderrad).
