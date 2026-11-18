@@ -75,3 +75,77 @@ describe("GET /orders/:id/price", () => {
     expect(res.body).toEqual({ net: "0.85", vat: "0.21", total: "1.06" });
   });
 });
+
+describe("GET /orders/:id/price, rabatt och format", () => {
+  async function hamtaPris(orderId: number, kundId: number) {
+    return request(app).get(`/orders/${orderId}/price`).set("X-Customer-Id", String(kundId));
+  }
+
+  it("tillämpar den utgångna rabatten GAMMAL15 på order 1045 (valid_to ignoreras)", async () => {
+    // Konstigt: GAMMAL15 gick ut 2024 men rabatten tillämpas ändå.
+    const res = await hamtaPris(1045, 5);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "551.65", vat: "137.91", total: "689.56" });
+  });
+
+  it("ger samma pris för en okänd rabattkod som utan rabattkod", async () => {
+    // Konstigt: en kod som inte finns i discounts ger tyst ingen rabatt.
+    const medKod = await skapaOrder(1, "FINNSINTE", 1, "100.00");
+    const utanKod = await skapaOrder(1, null, 1, "100.00");
+    const resMed = await hamtaPris(medKod, 1);
+    const resUtan = await hamtaPris(utanKod, 1);
+    expect(resMed.status).toBe(200);
+    expect(resUtan.status).toBe(200);
+    expect(resMed.body).toEqual(resUtan.body);
+    expect(resMed.body).toEqual({ net: "100", vat: "25", total: "125" });
+  });
+
+  it("prissätter den avbrutna ordern 1046 och ger 200 med total 1123.75", async () => {
+    const res = await hamtaPris(1046, 6);
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe("1123.75");
+  });
+
+  it("ger total 736.0 med en decimal för order 1041 (net 588.8, vat 147.2)", async () => {
+    // Konstigt: str(Decimal) ger "736.0" och inte "736.00".
+    const res = await hamtaPris(1041, 2);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "588.8", vat: "147.2", total: "736.0" });
+  });
+
+  it("ger total med lika många decimaler som den längsta av net och vat (1040)", async () => {
+    const res = await hamtaPris(1040, 1);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "899", vat: "224.75", total: "1123.75" });
+  });
+
+  it("ger total med två decimaler när vat har noll decimaler (4.02)", async () => {
+    // net 4.02, vat trunkeras från 1.005 till "1" (noll decimaler), total "5.02" (längsta).
+    const id = await skapaOrder(1, null, 1, "4.02");
+    const res = await hamtaPris(id, 1);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "4.02", vat: "1", total: "5.02" });
+  });
+
+  it("ger inget avdrag för rabatt på 0 procent", async () => {
+    await db.query(
+      "INSERT INTO discounts (code, percent, valid_from, valid_to) VALUES ($1, $2, $3, $4)",
+      ["NOLL0", 0, "2020-01-01", "2099-12-31"],
+    );
+    const id = await skapaOrder(1, "NOLL0", 1, "100.00");
+    const res = await hamtaPris(id, 1);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "100", vat: "25", total: "125" });
+  });
+
+  it("ger 0, 0 och 0 för rabatt på 100 procent", async () => {
+    await db.query(
+      "INSERT INTO discounts (code, percent, valid_from, valid_to) VALUES ($1, $2, $3, $4)",
+      ["HELT100", 100, "2020-01-01", "2099-12-31"],
+    );
+    const id = await skapaOrder(1, "HELT100", 1, "100.00");
+    const res = await hamtaPris(id, 1);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ net: "0", vat: "0", total: "0" });
+  });
+});
