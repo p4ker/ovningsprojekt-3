@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { computePrice, Price, PriceLine } from "./price";
+import { writePriceLog } from "./priceLog";
 
 type Rad = {
   id: number;
@@ -37,7 +38,9 @@ export async function calcOrderPrices(ids: number[]): Promise<Map<number, Price>
 
   const priser = new Map<number, Price>();
   for (const [id, order] of ordrar) {
-    priser.set(id, computePrice(order.lines, order.percent));
+    const pris = computePrice(order.lines, order.percent);
+    writePriceLog(id, pris.total);
+    priser.set(id, pris);
   }
   return priser;
 }
